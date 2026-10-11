@@ -1,0 +1,13 @@
+services:
+  sqlserver:
+    image: 'mcr.microsoft.com/mssql/server:latest'
+    environment:
+      # Por que: ACCEPT_EULA obligatorio; PID express para dev; password alineado
+      # con spring.datasource.password (verYs3cret) para que Flyway conecte.
+      - 'ACCEPT_EULA=yes'
+      - 'MSSQL_PID=express'
+      - 'MSSQL_SA_PASSWORD=verYs3cret'
+    ports:
+      # Por que del cambio: antes era '1433' (puerto host aleatorio) y la app
+      # siempre busca localhost:1433 fijo; con 1433:1433 el mapeo es determinista.
+      - '1433:1433'

@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- Plantilla de factura Rent-a-Car (RF-06.3). Por que: desglosa cabecera + lineas con km/combustible incluidos como conceptos. -->
+<jasperReport xmlns="http://jasperreports.sourceforge.net/jasperreports" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://jasperreports.sourceforge.net/jasperreports http://jasperreports.sourceforge.net/xsd/jasperreport.xsd" name="factura" pageWidth="595" pageHeight="842" columnWidth="555" leftMargin="20" rightMargin="20" topMargin="20" bottomMargin="20">
+  <parameter name="facturaId" class="java.lang.Long"/>
+  <parameter name="contratoId" class="java.lang.Long"/>
+  <parameter name="subtotal" class="java.math.BigDecimal"/>
+  <parameter name="cargos" class="java.math.BigDecimal"/>
+  <parameter name="impuestos" class="java.math.BigDecimal"/>
+  <parameter name="total" class="java.math.BigDecimal"/>
+  <field name="concepto" class="java.lang.String"/>
+  <field name="cantidad" class="java.math.BigDecimal"/>
+  <field name="precioUnitario" class="java.math.BigDecimal"/>
+  <field name="subtotal" class="java.math.BigDecimal"/>
+  <title>
+    <band height="80">
+      <staticText><reportElement x="0" y="0" width="555" height="30"/><textElement textAlignment="Center"><font size="18" isBold="true"/></textElement><text><![CDATA[FACTURA RENT-A-CAR]]></text></staticText>
+      <textField><reportElement x="0" y="35" width="555" height="20"/><textElement textAlignment="Center"/><textFieldExpression><![CDATA["Factura #" + $P{facturaId} + "  |  Contrato #" + $P{contratoId}]]></textFieldExpression></textField>
+    </band>
+  </title>
+  <columnHeader>
+    <band height="20">
+      <staticText><reportElement x="0" y="0" width="255" height="20"/><text><![CDATA[Concepto]]></text></staticText>
+      <staticText><reportElement x="255" y="0" width="100" height="20"/><text><![CDATA[Cant.]]></text></staticText>
+      <staticText><reportElement x="355" y="0" width="100" height="20"/><text><![CDATA[P. Unit]]></text></staticText>
+      <staticText><reportElement x="455" y="0" width="100" height="20"/><text><![CDATA[Subtotal]]></text></staticText>
+    </band>
+  </columnHeader>
+  <detail>
+    <band height="20">
+      <textField><reportElement x="0" y="0" width="255" height="20"/><textFieldExpression><![CDATA[$F{concepto}]]></textFieldExpression></textField>
+      <textField><reportElement x="255" y="0" width="100" height="20"/><textFieldExpression><![CDATA[$F{cantidad}]]></textFieldExpression></textField>
+      <textField><reportElement x="355" y="0" width="100" height="20"/><textFieldExpression><![CDATA[$F{precioUnitario}]]></textFieldExpression></textField>
+      <textField><reportElement x="455" y="0" width="100" height="20"/><textFieldExpression><![CDATA[$F{subtotal}]]></textFieldExpression></textField>
+    </band>
+  </detail>
+  <summary>
+    <band height="100">
+      <textField><reportElement x="355" y="0" width="200" height="20"/><textFieldExpression><![CDATA["Subtotal: " + $P{subtotal}]]></textFieldExpression></textField>
+      <textField><reportElement x="355" y="20" width="200" height="20"/><textFieldExpression><![CDATA["Cargos: " + $P{cargos}]]></textFieldExpression></textField>
+      <textField><reportElement x="355" y="40" width="200" height="20"/><textFieldExpression><![CDATA["ITBIS: " + $P{impuestos}]]></textFieldExpression></textField>
+      <textField><reportElement x="355" y="60" width="200" height="20"/><textFieldExpression><![CDATA["TOTAL: " + $P{total}]]></textFieldExpression></textField>
+    </band>
+  </summary>
+</jasperReport>

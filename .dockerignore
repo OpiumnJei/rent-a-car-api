@@ -1,0 +1,14 @@
+# Por que: evita mandar al demonio salidas de compilacion, metadata del IDE y
+# restos de pruebas locales; acelera el build y evita filtrar credenciales sueltas.
+target/
+build/
+.idea/
+.git/
+docs/
+*.log
+f*.pdf
+cp.txt
+server*.log
+Dockerfile
+compose.yaml
+.dockerignore

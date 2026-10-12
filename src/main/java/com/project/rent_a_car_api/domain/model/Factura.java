@@ -5,13 +5,15 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 /**
- * Factura consolidada del alquiler (RF-06.1, RF-06.2).
+ * Factura del alquiler, inicial o complementaria (RF-06.1, RF-06.2).
  * <p>
- * Por que: agrupa subtotal de dias + cargos de inspeccion + ITBIS en un total
- * definitivo vinculado al contrato, con sus lineas de detalle.
+ * Por que del cambio: antes una sola factura exigia salida + entrada (bloqueaba el cobro
+ * previo a la entrega); ahora la INICIAL lleva subtotal de dias + ITBIS con cargos 0 y
+ * la COMPLEMENTARIA lleva solo cargos de devolucion vinculados via facturaOrigenId.
  */
-public record Factura(Long id, Long contratoId, BigDecimal subtotal, BigDecimal cargos,
-                      BigDecimal impuestos, BigDecimal total, LocalDateTime fecha, List<FacturaDetalle> detalles) {
+public record Factura(Long id, Long contratoId, TipoFactura tipo, Long facturaOrigenId,
+                      BigDecimal subtotal, BigDecimal cargos, BigDecimal impuestos,
+                      BigDecimal total, LocalDateTime fecha, List<FacturaDetalle> detalles) {
 
     /**
      * Linea de detalle de factura.

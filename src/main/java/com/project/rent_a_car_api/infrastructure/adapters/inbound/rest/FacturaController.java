@@ -20,9 +20,10 @@ import org.springframework.web.bind.annotation.RestController;
 import java.util.List;
 
 /**
- * Controller de facturacion y PDF (RF-06).
- * Por que: emitir consolida tarifa + cargos + ITBIS; el PDF se descarga
- * como application/pdf con Content-Disposition para el frontend.
+ * Controller de facturacion en dos tiempos y PDF (RF-06).
+ * Por que del cambio: POST emite la INICIAL tras la salida (cobro previo a entregar);
+ * POST /{id}/complementaria emite la COMPLEMENTARIA tras la entrada solo con cargos.
+ * El PDF se descarga como application/pdf con Content-Disposition para el frontend.
  */
 @RestController
 @RequestMapping("/api/v1/facturas")
@@ -34,10 +35,26 @@ public class FacturaController {
         this.facturas = facturas;
     }
 
+    /** Request de complementaria. Por que: record local con fecha opcional (null = fin de reserva). */
+    public record ComplementariaRequest(java.time.LocalDate fechaDevolucion) {
+    }
+
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public Responses.FacturaResponse emitir(@Valid @RequestBody Requests.FacturaRequest req) {
         var r = facturas.emitir(req.contratoId(), req.fechaDevolucion());
+        if (r.isFailure()) {
+            throw new DomainException(r.getError());
+        }
+        return Responses.FacturaResponse.desde(r.getValue());
+    }
+
+    /** Complementaria de cargos de devolucion. Por que: cuelga de la inicial sin mutarla. */
+    @PostMapping("/{id}/complementaria")
+    @ResponseStatus(HttpStatus.CREATED)
+    public Responses.FacturaResponse complementaria(@PathVariable Long id,
+                                                    @RequestBody(required = false) ComplementariaRequest body) {
+        var r = facturas.emitirComplementaria(id, body == null ? null : body.fechaDevolucion());
         if (r.isFailure()) {
             throw new DomainException(r.getError());
         }

@@ -77,9 +77,10 @@ public final class Responses {
         }
     }
 
-    public record FacturaResponse(Long id, Long contratoId, Object subtotal, Object cargos, Object impuestos, Object total, Object fecha, Object detalles) {
+    public record FacturaResponse(Long id, Long contratoId, String tipo, Long facturaOrigenId, Object subtotal, Object cargos, Object impuestos, Object total, Object fecha, Object detalles) {
         public static FacturaResponse desde(Factura d) {
-            return new FacturaResponse(d.id(), d.contratoId(), d.subtotal(), d.cargos(), d.impuestos(), d.total(), d.fecha(), d.detalles());
+            // Por que del cambio: se exponen tipo y factura origen para distinguir inicial de complementaria.
+            return new FacturaResponse(d.id(), d.contratoId(), d.tipo().name(), d.facturaOrigenId(), d.subtotal(), d.cargos(), d.impuestos(), d.total(), d.fecha(), d.detalles());
         }
     }
 }

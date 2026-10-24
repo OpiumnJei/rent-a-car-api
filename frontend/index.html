@@ -1,0 +1,256 @@
+
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#20252D">
+    <title>RentCar | Centro de operaciones</title>
+
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <script src="https://unpkg.com/lucide@0.468.0/dist/umd/lucide.min.js" defer></script>
+    <link rel="stylesheet" href="css/styles.css">
+    <script src="js/api.js" defer></script>
+    <script src="js/app.js" defer></script>
+</head>
+<body>
+    <div class="app-container">
+
+        <aside class="sidebar" id="sidebar">
+            <div class="brand">
+                <div class="brand-copy">
+                    <div class="brand-mark" aria-hidden="true">
+                      <i data-lucide="car-front"></i>
+                    </div>
+                    <h2>RentCar</h2>
+                    <span>Centro de operaciones</span>
+                </div>
+            </div>
+
+            <nav class="sidebar-nav" aria-label="Navegación principal">
+                <p class="nav-heading">Operaciones</p>
+
+                <a href="#dashboard" class="nav-link active">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="layout-dashboard"></i>
+                    </span>
+                    Panel principal
+                </a>
+
+                <a href="#vehiculos" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="car-front"></i>
+                    </span>
+                    Vehículos
+                </a>
+
+                <a href="#reservas" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="calendar-check"></i>
+                    </span>
+                    Reservas
+                </a>
+
+                <a href="#contratos" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="file-text"></i>
+                    </span>
+                    Contratos
+                </a>
+
+                <a href="#inspecciones" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="clipboard-check"></i>
+                    </span>
+                    Inspecciones
+                </a>
+
+                <a href="#facturacion" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="receipt"></i>
+                    </span>
+                    Facturación
+                </a>
+
+                <p class="nav-heading nav-heading-spaced">Administración</p>
+
+                <a href="#clientes" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="users"></i>
+                    </span>
+                    Clientes y licencias
+                </a>
+
+                <a href="#sucursales" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="building-2"></i>
+                    </span>
+                    Sucursales
+                </a>
+
+                <a href="#empleados" class="nav-link">
+                    <span class="nav-icon" aria-hidden="true">
+                        <i data-lucide="contact-round"></i>
+                    </span>
+                    Empleados
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <span class="footer-indicator"></span>
+                <span>RentCar · Administración</span>
+            </div>
+        </aside>
+
+        <div class="main-wrapper">
+            <header class="topbar">
+                <div class="topbar-left">
+                   <button class="menu-toggle" id="menu-toggle"
+                           type="button"
+                           aria-label="Abrir menú"
+                           aria-controls="sidebar"
+                           aria-expanded="false">
+                    <i data-lucide="menu"></i>
+                    </button>
+                <div class="topbar-title">
+                  <span class="topbar-section">Centro de operaciones</span>
+                  <span class="topbar-subtitle">Gestión de alquileres</span>
+                </div>
+        </div>
+            </header>
+
+            <main class="main-content" id="main-content">
+
+                <section class="page-header">
+                    <div>
+                        <p class="page-context">Gestión de alquileres</p>
+                        <h1>Panel principal</h1>
+                        <p class="page-description">
+                            Disponibilidad de vehículos y operaciones de alquiler.
+                        </p>
+                    </div>
+                    <span class="data-status" id="api-status">
+                        Datos pendientes de conexión
+                    </span>
+                </section>
+
+                <section class="quick-actions" aria-label="Acciones rápidas">
+                   <a href="#clientes" class="quick-action">
+                     <i data-lucide="user-plus"></i>
+                     <span>Registrar cliente</span>
+                    </a>
+
+                    <a href="#vehiculos" class="quick-action">
+                     <i data-lucide="car-front"></i>
+                     <span>Ver vehículos</span>
+                    </a>
+               </section>
+
+                <section class="operations-overview"
+                         aria-label="Indicadores de operaciones">
+
+                    <article class="fleet-highlight">
+                        <div class="fleet-highlight-top">
+                            <span>Disponibilidad de la flota</span>
+                            <span class="fleet-symbol" aria-hidden="true">
+                                <i data-lucide="car-front"></i>
+                            </span>
+                        </div>
+                        <strong id="total-disponibles">—</strong>
+                        <p>Vehículos disponibles</p>
+                        <div class="fleet-highlight-bottom">
+                            <span>Inventario conectado próximamente</span>
+                        </div>
+                    </article>
+
+                    <div class="secondary-metrics">
+                        <article class="metric">
+                            <span class="metric-label">Total de vehículos</span>
+                            <strong id="total-vehiculos">—</strong>
+                            <span class="metric-note">Flota registrada</span>
+                        </article>
+
+                        <article class="metric">
+                            <span class="metric-label">Reservas</span>
+                            <strong id="total-reservas">—</strong>
+                            <span class="metric-note">Registros de reservas</span>
+                        </article>
+
+                        <article class="metric">
+                            <span class="metric-label">Sucursales</span>
+                            <strong id="total-sucursales">—</strong>
+                            <span class="metric-note">Puntos de operación</span>
+                        </article>
+
+                        <article class="metric">
+                            <span class="metric-label">Facturas</span>
+                            <strong id="total-facturas">—</strong>
+                            <span class="metric-note">Registros de facturación</span>
+                        </article>
+                    </div>
+                </section>
+
+                <section class="dashboard-grid">
+                    <article class="content-panel fleet-panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Estado de la flota</h2>
+                                <p>Consulta de vehículos por disponibilidad.</p>
+                            </div>
+                            <a href="#vehiculos" class="text-action">
+                                Ver vehículos
+                            </a>
+                        </div>
+
+                        <div class="table-wrap">
+                            <table class="data-table">
+                                <thead>
+                                    <tr>
+                                        <th>Vehículo</th>
+                                        <th>Placa</th>
+                                        <th>Sucursal</th>
+                                        <th>Estado</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="fleet-table-body">
+                                    <tr>
+                                        <td colspan="4" class="empty-table">
+                                            Conecta la API para consultar la flota.
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </article>
+
+                    <article class="content-panel reservations-panel">
+                        <div class="panel-heading">
+                            <div>
+                                <h2>Reservas</h2>
+                                <p>Seguimiento de las operaciones.</p>
+                            </div>
+                        </div>
+
+                        <div class="empty-state">
+                            <div class="empty-state-icon" aria-hidden="true">▤</div>
+                            <h3>Sin datos cargados</h3>
+                            <p>
+                                Las reservas se mostrarán cuando
+                                conectemos el servicio.
+                            </p>
+                            <a href="#reservas" class="btn btn-outline">
+                                Ir a reservas
+                            </a>
+                        </div>
+                    </article>
+                </section>
+
+            </main>
+        </div>
+    </div>
+</body>
+</html>

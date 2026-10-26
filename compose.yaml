@@ -1,9 +1,7 @@
-# Rent-a-Car API + SQL Server con un comando: docker compose up --build.
-# Por que 3 servicios: sqlserver guarda datos, db-init crea RentACarDB (Flyway crea
-# tablas, no la base) y api arranca cuando db-init termina OK. application.properties
-# no se toca: Spring pisa el hardcode local con las variables SPRING_* de abajo.
+#sqlserver guarda datos, db-init crea RentACarDB (Flyway crea
+# tablas, no la base) y api arranca cuando db-init termina OK.
 services:
-  sqlserver:
+  sqlserver: #1 primer servicio
     image: 'mcr.microsoft.com/mssql/server:latest'
     environment:
       - 'ACCEPT_EULA=yes'
@@ -11,14 +9,14 @@ services:
       # Por que default verYs3cret: igual al password hardcodeado local; se cambia con DB_PASSWORD=... preferiblemente via .env (no versionado).
       - 'MSSQL_SA_PASSWORD=${DB_PASSWORD:-verYs3cret}'
     volumes:
-      # Por que volumen nombrado: los datos sobreviven a docker compose down.
+      # volumen nombrado: los datos sobreviven a docker compose down.
       - sqlserver-data:/var/opt/mssql
-    # Por que puerto 14333: expone SQL al host para SSMS/Azure Data Studio sin chocar
+    # puerto 14333: expone SQL al host para SSMS/Azure Data Studio sin chocar
     # con un SQLEXPRESS local que ya use el 1433 (la api sigue usando sqlserver:1433 interno).
     ports:
       - '14333:1433'
     healthcheck:
-      # Por que doble intento: las imagenes nuevas traen mssql-tools18 (exige -C por el
+      # doble intento: las imagenes nuevas traen mssql-tools18 (exige -C por el
       # cert autofirmado) y las viejas traen mssql-tools (sin flag -C); asi vale en ambas.
       test: ["CMD-SHELL", "(/opt/mssql-tools18/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -C -Q 'SELECT 1' -b -o /dev/null || /opt/mssql-tools/bin/sqlcmd -S localhost -U sa -P \"$${MSSQL_SA_PASSWORD}\" -Q 'SELECT 1' -b -o /dev/null)"]
       interval: 10s
@@ -26,10 +24,10 @@ services:
       retries: 12
       start_period: 20s
 
-  db-init:
-    # Por que se reusa la imagen del servidor: ya viene descargada y trae sqlcmd, sin imagen extra.
+  db-init: # segundo servicio
+    # se reusa la imagen del servidor: ya viene descargada y trae sqlcmd, sin imagen extra.
     image: 'mcr.microsoft.com/mssql/server:latest'
-    depends_on:
+    depends_on: # depende del primer servicio OK
       sqlserver:
         condition: service_healthy
     environment:
@@ -50,11 +48,11 @@ services:
 
   api:
     build: .
-    depends_on:
+    depends_on: # depende del segundo servicio OK
       db-init:
         condition: service_completed_successfully
     environment:
-      # Por que estas 3 variables: pisan el hardcode de application.properties solo
+      #estas 3 variables: pisan el hardcode de application.properties solo
       # dentro del contenedor (afuera sigue valiendo localhost\SQLEXPRESS).
       - 'SPRING_DATASOURCE_URL=jdbc:sqlserver://sqlserver:1433;databaseName=RentACarDB;encrypt=false;trustServerCertificate=true'
       - 'SPRING_DATASOURCE_USERNAME=sa'

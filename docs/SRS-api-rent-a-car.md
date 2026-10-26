@@ -11,9 +11,10 @@ El propósito de este documento es definir la Especificación de Requisitos de S
 El backend proporcionará una API RESTful y stateless orientada al servicio de gestión de alquiler de vehículos. Administrará el ciclo de vida completo de la operación:
 * Catálogos (sucursales, vehículos, modelos, tarifas).
 * Verificación de clientes y licencias de conducir.
+* Gestión de empleados con roles (base de la autenticación JWT).
 * Orquestación de reservas y contratos de alquiler.
 * **Módulo integral de inspecciones técnicas y físicas de vehículos (Salida y Entrada).**
-* Cálculo financiero y generación de facturas desglosadas (incluyendo cargos por ajustes detectados en inspección) con renderizado en PDF.
+* Facturación en dos tiempos: factura inicial tras la salida (cobro previo a la entrega) y factura complementaria tras la entrada (cargos de devolución), con renderizado en PDF.
 
 ### 1.3 Glosario Técnico
 * **Arquitectura Hexagonal (Puertos y Adaptadores):** Patrón arquitectónico que aísla el núcleo de dominio de las dependencias externas (frameworks, bases de datos, APIs externas).
@@ -23,6 +24,9 @@ El backend proporcionará una API RESTful y stateless orientada al servicio de g
 * **Adaptador de Salida (Outbound Adapter):** Implementación técnica concreta de un puerto de salida (ej. Repositorios Spring Data JPA, adaptadores iText/JasperReports).
 * **Inspección de Salida (Check-out):** Verificación técnica realizada antes de que el cliente retire el vehículo (kilometraje inicial, nivel de combustible y estado físico).
 * **Inspección de Entrada (Check-in):** Verificación técnica realizada al momento de la devolución del vehículo para auditar kilometraje final, combustible retornado y detección de nuevos daños.
+* **Patrón Result:** Los casos de uso retornan `Result<T>` (éxito con valor o fallo con `DomainError` tipificado `NOT_FOUND`/`CONFLICT`/`VALIDATION`) en vez de lanzar excepciones de negocio; el controller convierte el fallo en `DomainException` y el handler lo mapea a Problem Details.
+* **Factura Inicial:** Documento fiscal emitido tras la inspección de salida (días × tarifa + ITBIS, cargos en cero); se cobra antes de entregar el vehículo y nunca se muta.
+* **Factura Complementaria:** Documento fiscal vinculado a una inicial, emitido tras la inspección de entrada únicamente con los cargos de devolución; solo existe si dichos cargos son mayores a cero.
 
 --- 
 
@@ -92,6 +96,7 @@ El backend funciona de manera autónoma como un microservicio o API central que 
 
 * **RF-02.1 (Registro de Clientes):** Alta y consulta de clientes mediante cédula/pasaporte.
 * **RF-02.2 (Validación de Licencias):** Permite registrar y verificar la vigencia de licencias de conducir asociadas a un cliente. Rechaza reservas si la fecha de expiración de la licencia es anterior o coincide con el periodo de alquiler.
+* **RF-02.3 (Gestión de Empleados):** Alta y consulta de empleados con sucursal asignada, `username` único, password con hash BCrypt, rol (`ADMINISTRADOR`, `AGENTE`, `MECANICO`) y flag `activo` para bloquear acceso sin borrar historial. Contratos e inspecciones referencian al empleado responsable/inspector (FK `EMPLEADO`).
 
 ### RF-03: Procesamiento de Reservas
 
@@ -105,8 +110,8 @@ El backend funciona de manera autónoma como un microservicio o API central que 
 
 ### RF-04: Gestión de Contratos
 
-* **RF-04.1 (Generación de Contrato):** A partir de una reserva confirmada, genera el contrato de alquiler asignando al empleado responsable, fijando el monto de garantía y el total estimado.
-* **RF-04.2 (Actualización por Contrato):** Cambia el estado del contrato a `Activo`.
+* **RF-04.1 (Generación de Contrato):** A partir de una reserva confirmada, genera el contrato de alquiler asignando al empleado responsable (existente y activo), fijando el monto de garantía y el total estimado. Una reserva solo genera un contrato; al generarlo la reserva pasa a `CONVERTIDA`.
+* **RF-04.2 (Estado del Contrato):** El contrato nace en estado `Activo`.
 
 ### RF-05: Módulo de Inspección de Vehículos (Salida y Entrada)
 
@@ -132,21 +137,31 @@ El backend funciona de manera autónoma como un microservicio o API central que 
 
 
 * **RF-05.5 (Cálculo de Penalizaciones y Cargos de Inspección):**
-* Compara el nivel de combustible de salida vs. entrada. Si el nivel devuelto es inferior, genera un cargo por faltante de combustible.
-* Detecta si hubo exceso de kilometraje permitido o cargos por reparación derivados de las observaciones de entrada.
+* Compara el nivel de combustible de salida vs. entrada. Si el nivel devuelto es inferior, genera un cargo por faltante de combustible (un costo fijo por cada escalón: `Lleno → 3/4 → 1/2 → 1/4 → Reserva`).
+* Detecta exceso sobre los kilómetros incluidos por día, cargos por reparación derivados de las observaciones de entrada y recargo por días de retraso respecto al fin contractual.
+* Los parámetros (costo por nivel, precio por km extra, km incluidos/día, recargo por daño y por día de retraso, % ITBIS) viven en la tabla `PARAMETRO_FACTURACION`, con respaldo en `BillingProperties`.
 
 
 
-### RF-06: Módulo de Facturación y Expresión en PDF
+### RF-06: Módulo de Facturación en Dos Tiempos y PDF
 
-* **RF-06.1 (Consolidación Financiera):** Procesa el total definitivo a facturar consolidando:
-* Subtotal de días de alquiler según tarifa vigente.
-* Cargos adicionales derivados de la inspección de entrada (faltante de combustible, cargos por daños o retrasos).
-* Aplicación de impuestos (IVA/ITBIS) y cálculo del monto total.
+El negocio cobra **antes de entregar el vehículo**, por lo que la facturación se divide
+en dos documentos fiscales. La factura inicial nunca se muta una vez emitida.
 
-
-* **RF-06.2 (Persistencia de Factura):** Registra la cabecera (`FACTURA`) y sus líneas en `FACTURA_DETALLE` vinculadas al contrato e inspecciones asociadas.
-* **RF-06.3 (Generación de PDF):** Transforma la factura y sus detalles en un archivo PDF estructurado (incluyendo datos de inspección como kilometraje recorrido y combustible) para su descarga vía API.
+* **RF-06.1 (Factura Inicial):** Se emite tras la inspección de salida (exige contrato
+vigente + salida registrada; no exige la entrada para no bloquear el cobro previo).
+Consolida subtotal de días de alquiler según tarifa vigente (cargos en cero),
+aplica ITBIS y calcula el total. Solo existe una inicial por contrato.
+* **RF-06.2 (Factura Complementaria):** Se emite tras la inspección de entrada, colgada
+de una inicial existente (`factura_origen_id`). Consolida únicamente los cargos de
+devolución calculados en RF-05.5 más su ITBIS. Si la devolución no genera cargos,
+no se emite documento (conflicto 409) en vez de una factura en cero.
+* **RF-06.3 (Persistencia de Factura):** Registra la cabecera (`FACTURA` con `tipo`
+`INICIAL`/`COMPLEMENTARIA`) y sus líneas en `FACTURA_DETALLE` vinculadas al contrato.
+* **RF-06.4 (Generación de PDF):** Transforma cada factura en un archivo PDF con identidad
+"Rent a car Sys" (encabezado comercial, datos de cliente/vehículo/contrato/periodo,
+tabla de conceptos y caja de totales) para su descarga vía API. La inicial se titula
+`FACTURA`; la complementaria, `FACTURA COMPLEMENTARIA` con referencia a la inicial.
 
 ---
 
@@ -164,18 +179,18 @@ El backend funciona de manera autónoma como un microservicio o API central que 
 
 ### RNF-03: Seguridad y Autenticación
 
-* Implementación de Spring Security mediante tokens **JWT (JSON Web Tokens)**.
-* Control de acceso basado en roles:
-* `ROLE_ADMINISTRADOR`: Acceso total.
-* `ROLE_AGENTE`: Gestión de clientes, reservas, contratos y facturación.
-* `ROLE_MECANICO` / `ROLE_INSPECTOR`: Exclusivo para registro y consulta de inspecciones técnicas de salida/entrada.
+* Implementación de Spring Security mediante tokens **JWT (JSON Web Tokens)** (fase de autenticación pendiente; temporalmente la API opera con acceso abierto `permitAll`).
+* Control de acceso basado en roles (enum `RolEmpleado`, sin prefijo `ROLE_`):
+* `ADMINISTRADOR`: Acceso total.
+* `AGENTE`: Gestión de clientes, reservas, contratos y facturación.
+* `MECANICO`: Exclusivo para registro y consulta de inspecciones técnicas de salida/entrada.
 
 
 
 ### RNF-04: Manejo de Excepciones y Trazabilidad
 
 * Formato estandarizado de respuesta para errores HTTP basado en el estándar **RFC 7807 (Problem Details)**.
-* Uso de ExcepcionHandler global para capturar y mapear excepciones de negocio a códigos HTTP apropiados (400, 404, 409, 500).
+* Uso de ExcepcionHandler global para capturar y mapear excepciones de negocio a códigos HTTP apropiados (400, 404, 409, 500). Puente con el patrón Result: el controller convierte `Result.Failure` en `DomainException` (`NOT_FOUND` → 404, `CONFLICT` → 409, `VALIDATION` → 400).
 * Control global de transacciones con `@Transactional` garantizando reversión (rollback) ante fallos en la secuencia Reserva $\rightarrow$ Contrato $\rightarrow$ Inspección $\rightarrow$ Factura.
 
 ---
@@ -185,25 +200,27 @@ El backend funciona de manera autónoma como un microservicio o API central que 
 ### 5.1 Estructura de Paquetes
 
 ```text
-com.rentacar.backend
+com.project.rent_a_car_api
 │
 ├── domain/                         -- Núcleo Puro de Dominio (Sin dependencias externas)
-│   ├── model/                      -- Entidades (Cliente, Vehiculo, Reserva, Contrato, Inspeccion, Factura)
-│   ├── exception/                  -- Excepciones de negocio (KilometrajeInvalidoException, InspeccionDuplicadaException)
+│   ├── model/                      -- Entidades (Sucursal, TipoVehiculo, Tarifa, Vehiculo, Cliente, Licencia, Reserva, Contrato, Inspeccion, Factura, Empleado + enums)
+│   ├── result/                     -- Patrón Result (Result<T>, DomainError NOT_FOUND/CONFLICT/VALIDATION)
+│   ├── exception/                  -- Puente DomainException (Failure -> ProblemDetail vía handler)
 │   └── service/                    -- Servicios de dominio (Ej: EvaluadorCargosInspeccionService)
 │
 ├── application/                    -- Capa de Aplicación
 │   ├── ports/
-│   │   ├── inbound/                -- Casos de Uso (RegistrarInspeccionUseCase, EmitirFacturaUseCase)
-│   │   └── outbound/               -- Puertos hacia afuera (InspeccionRepositoryPort, VehiculoStatePort, PdfGeneratorPort)
-│   └── usecase/                    -- Implementación de los Casos de Uso
+│   │   ├── inbound/                -- Casos de Uso (SucursalUseCase, VehiculoUseCase, ReservaUseCase, RegistrarInspeccionUseCase, FacturaUseCase, EmpleadoUseCase, ...)
+│   │   └── outbound/               -- Puertos hacia afuera (InspeccionRepositoryPort, FacturaRepositoryPort, VehiculoRepositoryPort, PdfGeneratorPort, BillingParamsPort, ...)
+│   └── usecase/                    -- Implementación de los Casos de Uso (retornan Result, @Transactional)
 │
 └── infrastructure/                 -- Capa de Adaptadores e Infraestructura
     ├── adapters/
-    │   ├── inbound/rest/           -- Controllers REST, DTOs, Mappers (MapStruct)
-    │   ├── outbound/persistence/    -- Entities JPA, Repositories Spring Data JPA
-    │   └── outbound/pdf/           -- Adaptador de generación de reportes PDF (iText / Jasper)
-    └── config/                     -- Beans de Spring, Security, Swagger
+    │   ├── inbound/rest/           -- Controllers REST, DTOs Requests/Responses (con anotaciones OpenAPI)
+    │   ├── outbound/persistence/    -- Entities JPA, Repositories Spring Data JPA, Adapters por agregado
+    │   └── outbound/pdf/           -- Adaptador JasperReports de factura (JasperFacturaPdfAdapter)
+    ├── config/                     -- Beans de Spring, Security (permitAll temporal), Swagger, BillingProperties
+    └── exception/                  -- GlobalExceptionHandler RFC 7807 (+ DomainException 400/404/409)
 
 ```
 
@@ -212,19 +229,25 @@ com.rentacar.backend
 #### Inbound Port (Caso de Uso de Inspección)
 
 ```java
-package com.rentacar.backend.application.ports.inbound;
+package com.project.rent_a_car_api.application.ports.inbound;
 
-import com.rentacar.backend.domain.model.Inspeccion;
+import com.project.rent_a_car_api.domain.model.Inspeccion;
+import com.project.rent_a_car_api.domain.model.NivelCombustible;
+import com.project.rent_a_car_api.domain.model.TipoInspeccion;
+import com.project.rent_a_car_api.domain.result.Result;
+import java.util.List;
 
 public interface RegistrarInspeccionUseCase {
-    Inspeccion ejecutar(
+    Result<Inspeccion> ejecutar(
             Long idContrato,
             Long idEmpleado,
-            String tipoInspeccion,
+            TipoInspeccion tipoInspeccion,
             int kilometraje,
-            String nivelCombustible,
+            NivelCombustible nivelCombustible,
             String observaciones
     );
+
+    Result<List<Inspeccion>> listarPorContrato(Long contratoId);
 }
 
 ```
@@ -232,9 +255,10 @@ public interface RegistrarInspeccionUseCase {
 #### Outbound Port (Persistencia de Inspección)
 
 ```java
-package com.rentacar.backend.application.ports.outbound;
+package com.project.rent_a_car_api.application.ports.outbound;
 
-import com.rentacar.backend.domain.model.Inspeccion;
+import com.project.rent_a_car_api.domain.model.Inspeccion;
+import com.project.rent_a_car_api.domain.model.TipoInspeccion;
 import java.util.List;
 import java.util.Optional;
 
@@ -242,7 +266,26 @@ public interface InspeccionRepositoryPort {
     Inspeccion guardar(Inspeccion inspeccion);
     Optional<Inspeccion> buscarPorId(Long idInspeccion);
     List<Inspeccion> listarPorContrato(Long idContrato);
-    boolean existePorContratoYTipo(Long idContrato, String tipoInspeccion);
+    boolean existePorContratoYTipo(Long idContrato, TipoInspeccion tipoInspeccion);
+}
+
+```
+
+#### Inbound Port (Caso de Uso de Facturación en Dos Tiempos)
+
+```java
+package com.project.rent_a_car_api.application.ports.inbound;
+
+import com.project.rent_a_car_api.domain.model.Factura;
+import com.project.rent_a_car_api.domain.result.Result;
+import java.time.LocalDate;
+
+public interface FacturaUseCase {
+    // Inicial tras la salida (cargos en cero); 409 si ya existe inicial.
+    Result<Factura> emitir(Long contratoId, LocalDate fechaDevolucion);
+
+    // Complementaria tras la entrada (solo cargos); 409 si no hay cargos.
+    Result<Factura> emitirComplementaria(Long facturaInicialId, LocalDate fechaDevolucion);
 }
 
 ```
@@ -251,19 +294,33 @@ public interface InspeccionRepositoryPort {
 
 ## 6. Mapeo de Interfaces de Entradas (REST API Endpoints)
 
-| Módulo | Método | Endpoint | Descripción | Roles Permitidos | DTO Entrada / Salida |
+| Módulo | Método | Endpoint | Descripción | Roles previstos (auth pendiente) | DTO Entrada / Salida |
 | --- | --- | --- | --- | --- | --- |
-| **Sucursales** | `GET` | `/api/v1/sucursales` | Listar todas las sucursales | Todos | `-` / `List<SucursalDTO>` |
-| **Vehículos** | `GET` | `/api/v1/vehiculos/disponibles` | Consultar vehículos disponibles por fecha/sucursal | `AGENTE`, `ADMIN` | `QueryParam` / `List<VehiculoDTO>` |
-| **Clientes** | `POST` | `/api/v1/clientes` | Registrar un cliente | `AGENTE`, `ADMIN` | `ClienteRequestDTO` / `ClienteDTO` |
-| **Licencias** | `POST` | `/api/v1/licencias` | Registrar/validar licencia de conducir | `AGENTE`, `ADMIN` | `LicenciaRequestDTO` / `LicenciaDTO` |
-| **Reservas** | `POST` | `/api/v1/reservas` | Crear reserva validando licencias y tarifas | `AGENTE`, `ADMIN` | `CrearReservaDTO` / `ReservaDTO` |
-| **Contratos** | `POST` | `/api/v1/contratos` | Generar contrato a partir de una reserva | `AGENTE`, `ADMIN` | `ContratoRequestDTO` / `ContratoDTO` |
-| **Inspecciones** | `POST` | `/api/v1/inspecciones` | Registrar inspección (Salida o Entrada) | `MECANICO`, `AGENTE`, `ADMIN` | `InspeccionRequestDTO` / `InspeccionDTO` |
-| **Inspecciones** | `GET` | `/api/v1/contratos/{id}/inspecciones` | Listar inspecciones (salida/entrada) de un contrato | `MECANICO`, `AGENTE`, `ADMIN` | `-` / `List<InspeccionDTO>` |
-| **Facturas** | `POST` | `/api/v1/facturas` | Emitir factura (consolida tarifa + cargos de inspección) | `AGENTE`, `ADMIN` | `EmitirFacturaDTO` / `FacturaDTO` |
-| **Facturas** | `GET` | `/api/v1/facturas/{id}/pdf` | Descargar PDF de factura con desglose detallado | `AGENTE`, `ADMIN` | `-` / `byte[] (application/pdf)` |
-y los que falten (como los de autenticacion por poner un ejemplo)
-```
+| **Sucursales** | `GET` | `/api/v1/sucursales?soloActivas=true` | Listar sucursales (activas por defecto) | Todos | `-` / `List<SucursalResponse>` |
+| **Sucursales** | `POST` | `/api/v1/sucursales` | Registrar sucursal | `AGENTE`, `ADMINISTRADOR` | `SucursalRequest` / `SucursalResponse` |
+| **Catálogos** | `GET` | `/api/v1/tipos-vehiculo` | Listar tipos de vehículo | Todos | `-` / `List<TipoResponse>` |
+| **Catálogos** | `POST` | `/api/v1/tipos-vehiculo` | Registrar tipo de vehículo | `AGENTE`, `ADMINISTRADOR` | `TipoRequest` / `TipoResponse` |
+| **Catálogos** | `GET` | `/api/v1/tarifas` | Listar tarifas activas | Todos | `-` / `List<TarifaResponse>` |
+| **Catálogos** | `POST` | `/api/v1/tarifas` | Definir tarifa activa del tipo | `AGENTE`, `ADMINISTRADOR` | `TarifaRequest` / `TarifaResponse` |
+| **Vehículos** | `GET` | `/api/v1/vehiculos/disponibles?sucursalId=` | Disponibles por sucursal | `AGENTE`, `ADMINISTRADOR` | `QueryParam` / `List<VehiculoResponse>` |
+| **Vehículos** | `POST` | `/api/v1/vehiculos` | Registrar vehículo (placa única) | `AGENTE`, `ADMINISTRADOR` | `VehiculoRequest` / `VehiculoResponse` |
+| **Vehículos** | `PATCH` | `/api/v1/vehiculos/{id}/estado` | Cambio manual de estado de flota | `AGENTE`, `ADMINISTRADOR` | `EstadoVehiculoRequest` / `VehiculoResponse` |
+| **Empleados** | `POST` | `/api/v1/empleados` | Registrar empleado (BCrypt + rol) | `ADMINISTRADOR` | `EmpleadoRequest` / `EmpleadoResponse` |
+| **Empleados** | `GET` | `/api/v1/empleados` | Listar empleados | `ADMINISTRADOR` | `-` / `List<EmpleadoResponse>` |
+| **Empleados** | `GET` | `/api/v1/empleados/{id}` | Buscar empleado | `ADMINISTRADOR` | `-` / `EmpleadoResponse` |
+| **Clientes** | `POST` | `/api/v1/clientes` | Registrar un cliente | `AGENTE`, `ADMINISTRADOR` | `ClienteRequest` / `ClienteResponse` |
+| **Licencias** | `POST` | `/api/v1/licencias` | Registrar/validar licencia de conducir | `AGENTE`, `ADMINISTRADOR` | `LicenciaRequest` / `LicenciaResponse` |
+| **Licencias** | `GET` | `/api/v1/clientes/{id}/licencias` | Licencias de un cliente | `AGENTE`, `ADMINISTRADOR` | `-` / `List<LicenciaResponse>` |
+| **Reservas** | `POST` | `/api/v1/reservas` | Crear reserva validando licencias y tarifas | `AGENTE`, `ADMINISTRADOR` | `ReservaRequest` / `ReservaResponse` |
+| **Contratos** | `POST` | `/api/v1/contratos` | Generar contrato a partir de una reserva | `AGENTE`, `ADMINISTRADOR` | `ContratoRequest` / `ContratoResponse` |
+| **Contratos** | `GET` | `/api/v1/contratos/{id}` | Buscar contrato | `AGENTE`, `ADMINISTRADOR` | `-` / `ContratoResponse` |
+| **Inspecciones** | `POST` | `/api/v1/inspecciones` | Registrar inspección (Salida o Entrada) | `MECANICO`, `AGENTE`, `ADMINISTRADOR` | `InspeccionRequest` / `InspeccionResponse` |
+| **Inspecciones** | `GET` | `/api/v1/contratos/{id}/inspecciones` | Listar inspecciones (salida/entrada) de un contrato | `MECANICO`, `AGENTE`, `ADMINISTRADOR` | `-` / `List<InspeccionResponse>` |
+| **Facturas** | `POST` | `/api/v1/facturas` | Emitir inicial tras la salida | `AGENTE`, `ADMINISTRADOR` | `FacturaRequest` / `FacturaResponse` |
+| **Facturas** | `POST` | `/api/v1/facturas/{id}/complementaria` | Emitir complementaria tras la entrada | `AGENTE`, `ADMINISTRADOR` | `ComplementariaRequest` / `FacturaResponse` |
+| **Facturas** | `GET` | `/api/v1/facturas` | Listar facturas | `AGENTE`, `ADMINISTRADOR` | `-` / `List<FacturaResponse>` |
+| **Facturas** | `GET` | `/api/v1/facturas/{id}` | Buscar factura | `AGENTE`, `ADMINISTRADOR` | `-` / `FacturaResponse` |
+| **Facturas** | `GET` | `/api/v1/facturas/{id}/pdf` | Descargar PDF de factura con desglose detallado | `AGENTE`, `ADMINISTRADOR` | `-` / `byte[] (application/pdf)` |
+| **Auth** | `POST` | `/api/v1/auth/login` | Login JWT (pendiente de implementación) | Todos | `LoginRequest` / `TokenResponse` |
 
-```
+Nota: los roles aplican cuando se active JWT (RNF-03); temporalmente la API opera con acceso abierto.

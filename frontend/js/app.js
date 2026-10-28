@@ -56,7 +56,11 @@ document.addEventListener("DOMContentLoaded", () => {
            }
 
            return;
-        } 
+        }        
+        if (nombre === "sucursales") {
+           mostrarSucursales();
+           return;
+        }
 
         const modulo = modulos[nombre];
 
@@ -88,6 +92,177 @@ document.addEventListener("DOMContentLoaded", () => {
 
         panel.appendChild(mensaje);
         contenido.append(encabezado, panel);
+    }
+
+    async function mostrarSucursales() {
+    contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Sucursales</h1>
+                <p class="page-description">
+                    Administración de los puntos de operación.
+                </p>
+            </div>
+        </section>
+
+        <section class="content-panel branches-panel">
+        <div class="branches-toolbar">
+
+          <div class="branches-search">
+
+            <input
+              type="search"
+              id="buscar-sucursal"
+              placeholder="Buscar sucursal..."
+              aria-label="Buscar sucursal"
+            >
+
+            <button
+             type="button"
+             id="btn-buscar-sucursal"
+             class="btn-search"
+            >
+            <i data-lucide="search"></i>
+            Buscar
+            </button>
+
+          </div>
+
+          <button
+           type="button"
+           id="nueva-sucursal"
+           class="btn-primary"
+          >
+          <i data-lucide="plus"></i>
+          Nueva sucursal
+          </button>
+        </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Dirección</th>
+                            <th>Teléfono</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="branches-table-body">
+                        <tr>
+                            <td colspan="5">Cargando sucursales...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+
+    const cuerpoTabla = document.getElementById("branches-table-body");
+    const buscador = document.getElementById("buscar-sucursal");
+
+    const botonBuscar = document.getElementById("btn-buscar-sucursal");
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+
+    try {
+        const sucursales = await window.sucursalesAPI.obtenerTodas();
+
+        // Evita actualizar una pantalla que ya no está abierta.
+        if (!cuerpoTabla.isConnected) return;
+
+        renderizarSucursales(sucursales, cuerpoTabla);
+
+    function buscarSucursales() {
+       const texto = buscador.value.trim().toLowerCase();
+       const filtradas = sucursales.filter(sucursal =>
+        (sucursal.nombre || "").toLowerCase().includes(texto) ||
+        (sucursal.direccion || "").toLowerCase().includes(texto)
+    );
+
+    renderizarSucursales(filtradas, cuerpoTabla);
+    }
+
+    botonBuscar.addEventListener("click", buscarSucursales);
+
+    buscador.addEventListener("keydown", evento => {
+      if (evento.key === "Enter") {
+          buscarSucursales();
+      }
+    });
+
+    buscador.addEventListener("input", () => {
+      if (buscador.value.trim() === "") {
+        renderizarSucursales(sucursales, cuerpoTabla);
+    }
+    });
+
+    } catch (error) {
+        console.error("Error al cargar sucursales:", error);
+
+        if (cuerpoTabla.isConnected) {
+            cuerpoTabla.innerHTML = `
+                <tr>
+                    <td colspan="5">
+                        No se pudieron cargar las sucursales.
+                        Verifica la conexión con el servidor.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+    }
+
+    function renderizarSucursales(sucursales, cuerpoTabla) {
+       cuerpoTabla.replaceChildren();
+
+    if (!Array.isArray(sucursales) || sucursales.length === 0) {
+        const fila = document.createElement("tr");
+        const celda = document.createElement("td");
+
+        celda.colSpan = 5;
+        celda.textContent = "No se encontraron sucursales.";
+
+        fila.appendChild(celda);
+        cuerpoTabla.appendChild(fila);
+        return;
+    }
+
+    sucursales.forEach(sucursal => {
+        const fila = document.createElement("tr");
+
+        const datos = [
+            sucursal.id,
+            sucursal.nombre,
+            sucursal.direccion,
+            sucursal.telefono
+        ];
+
+        datos.forEach(dato => {
+            const celda = document.createElement("td");
+            celda.textContent = dato ?? "—";
+            fila.appendChild(celda);
+        });
+
+        const celdaEstado = document.createElement("td");
+        const estado = document.createElement("span");
+
+        estado.className = sucursal.activo
+            ? "branch-status active"
+            : "branch-status inactive";
+
+        estado.textContent = sucursal.activo
+            ? "Activa"
+            : "Inactiva";
+
+        celdaEstado.appendChild(estado);
+        fila.appendChild(celdaEstado);
+
+        cuerpoTabla.appendChild(fila);
+    });
     }
 
     function cerrarMenu() {

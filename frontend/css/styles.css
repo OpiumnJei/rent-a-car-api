@@ -1226,3 +1226,159 @@ button, a {
     height: 16px;
     flex-shrink: 0;
 }
+
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+
+    display: flex;
+    justify-content: center;
+    align-items: center;
+
+    padding: 20px;
+    background: rgba(15, 23, 42, 0.65);
+}
+
+.modal-container {
+    width: 100%;
+    max-width: 520px;
+    max-height: 90vh;
+    overflow-y: auto;
+
+    background: #ffffff;
+    border-radius: 12px;
+
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+
+    padding: 24px 28px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #202630;
+    font-size: 24px;
+}
+
+.modal-header p {
+    margin: 6px 0 0;
+    color: #64748b;
+    font-size: 13px;
+}
+
+.modal-close {
+    border: none;
+    background: transparent;
+    color: #64748b;
+
+    font-size: 28px;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.modal-close:hover {
+    color: #cf202f;
+}
+
+.modal-body {
+    padding: 28px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    margin-bottom: 20px;
+}
+
+.form-group label {
+    color: #303846;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.form-group input {
+    box-sizing: border-box;
+    width: 100%;
+    height: 44px;
+    padding: 0 14px;
+
+    border: 1px solid #d9dee5;
+    border-radius: 6px;
+
+    background: #ffffff;
+    color: #202630;
+    font-size: 14px;
+}
+
+.form-group input:focus {
+    outline: none;
+    border-color: #cf202f;
+    box-shadow: 0 0 0 3px rgba(207, 32, 47, 0.1);
+}
+
+.form-message {
+    margin: 0;
+    color: #cf202f;
+    font-size: 13px;
+}
+
+.form-message:empty {
+    display: none;
+}
+
+.modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+
+    padding: 20px 28px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.btn-secondary {
+    height: 42px;
+    padding: 0 20px;
+
+    border: 1px solid #d9dee5;
+    border-radius: 6px;
+
+    background: #ffffff;
+    color: #303846;
+
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-secondary:hover {
+    background: #f1f3f5;
+}
+
+#guardar-sucursal:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    .modal-header,
+    .modal-body,
+    .modal-footer {
+        padding: 20px;
+    }
+
+    .modal-footer {
+        flex-direction: column-reverse;
+    }
+
+    .modal-footer button {
+        width: 100%;
+    }
+}

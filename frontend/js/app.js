@@ -162,6 +162,9 @@ document.addEventListener("DOMContentLoaded", () => {
     const cuerpoTabla = document.getElementById("branches-table-body");
     const buscador = document.getElementById("buscar-sucursal");
 
+    const botonNuevaSucursal = document.getElementById("nueva-sucursal");
+    botonNuevaSucursal.addEventListener("click", abrirModalSucursal);
+
     const botonBuscar = document.getElementById("btn-buscar-sucursal");
 
     if (window.lucide) {
@@ -216,53 +219,220 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     }
 
-    function renderizarSucursales(sucursales, cuerpoTabla) {
-       cuerpoTabla.replaceChildren();
+    function abrirModalSucursal() {
+        if (document.getElementById("modal-sucursal")) return;
 
-    if (!Array.isArray(sucursales) || sucursales.length === 0) {
-        const fila = document.createElement("tr");
-        const celda = document.createElement("td");
+        const modal = document.createElement("div");
+        modal.id = "modal-sucursal";
+        modal.className = "modal-overlay";
 
-        celda.colSpan = 5;
-        celda.textContent = "No se encontraron sucursales.";
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true"
+             aria-labelledby="modal-sucursal-titulo">
 
-        fila.appendChild(celda);
-        cuerpoTabla.appendChild(fila);
-        return;
-    }
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-sucursal-titulo">Nueva sucursal</h2>
+                    <p>Registra un nuevo punto de operación.</p>
+                </div>
 
-    sucursales.forEach(sucursal => {
-        const fila = document.createElement("tr");
+                <button type="button"
+                        class="modal-close"
+                        id="cerrar-modal-sucursal"
+                        aria-label="Cerrar formulario">
+                    &times;
+                </button>
+            </div>
 
-        const datos = [
-            sucursal.id,
-            sucursal.nombre,
-            sucursal.direccion,
-            sucursal.telefono
-        ];
+            <form id="form-nueva-sucursal">
 
-        datos.forEach(dato => {
-            const celda = document.createElement("td");
-            celda.textContent = dato ?? "—";
-            fila.appendChild(celda);
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label for="sucursal-nombre">
+                            Nombre de la sucursal
+                        </label>
+
+                        <input
+                            type="text"
+                            id="sucursal-nombre"
+                            name="nombre"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sucursal-direccion">
+                            Dirección
+                        </label>
+
+                        <input
+                            type="text"
+                            id="sucursal-direccion"
+                            name="direccion"
+                            maxlength="200"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="sucursal-telefono">
+                            Teléfono
+                        </label>
+
+                        <input
+                            type="tel"
+                            id="sucursal-telefono"
+                            name="telefono"
+                            maxlength="20"
+                            required
+                        >
+                    </div>
+
+                    <p id="mensaje-sucursal"
+                       class="form-message"
+                       role="alert"></p>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn-secondary"
+                            id="cancelar-sucursal">
+                        Cancelar
+                    </button>
+
+                    <button type="submit"
+                            class="btn-primary"
+                            id="guardar-sucursal">
+                        Guardar sucursal
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = document.getElementById("form-nueva-sucursal");
+        const botonGuardar = document.getElementById("guardar-sucursal");
+        const mensaje = document.getElementById("mensaje-sucursal");
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+
+        document.getElementById("cerrar-modal-sucursal")
+            .addEventListener("click", cerrar);
+
+        document.getElementById("cancelar-sucursal")
+            .addEventListener("click", cerrar);
+
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
         });
 
-        const celdaEstado = document.createElement("td");
-        const estado = document.createElement("span");
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
 
-        estado.className = sucursal.activo
-            ? "branch-status active"
-            : "branch-status inactive";
+            const sucursal = {
+                nombre: formulario.elements.nombre.value.trim(),
+                direccion: formulario.elements.direccion.value.trim(),
+                telefono: formulario.elements.telefono.value.trim()
+            };
 
-        estado.textContent = sucursal.activo
-            ? "Activa"
-            : "Inactiva";
+            if (!sucursal.nombre || !sucursal.direccion || !sucursal.telefono) {
+                mensaje.textContent = "Completa todos los campos.";
+                return;
+            }
 
-        celdaEstado.appendChild(estado);
-        fila.appendChild(celdaEstado);
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Guardando...";
+            mensaje.textContent = "";
 
-        cuerpoTabla.appendChild(fila);
-    });
+            try {
+                await window.sucursalesAPI.crear(sucursal);
+
+                cerrar();
+
+                if (location.hash === "#sucursales") {
+                    await mostrarSucursales();
+                }
+
+            } catch (error) {
+                console.error("Error al registrar sucursal:", error);
+
+                mensaje.textContent =
+                    "No se pudo registrar la sucursal. Verifica los datos e inténtalo nuevamente.";
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Guardar sucursal";
+                }
+            }
+        });
+
+        document.getElementById("sucursal-nombre").focus();
+    }
+
+    function renderizarSucursales(sucursales, cuerpoTabla) {
+        cuerpoTabla.replaceChildren();
+
+        if (!Array.isArray(sucursales) || sucursales.length === 0) {
+            const fila = document.createElement("tr");
+            const celda = document.createElement("td");
+
+            celda.colSpan = 5;
+            celda.textContent = "No se encontraron sucursales.";
+
+            fila.appendChild(celda);
+            cuerpoTabla.appendChild(fila);
+            return;
+        }
+
+        sucursales.forEach(sucursal => {
+            const fila = document.createElement("tr");
+
+            const datos = [
+                sucursal.id,
+                sucursal.nombre,
+                sucursal.direccion,
+                sucursal.telefono
+            ];
+
+            datos.forEach(dato => {
+                const celda = document.createElement("td");
+                celda.textContent = dato ?? "—";
+                fila.appendChild(celda);
+            });
+
+            const celdaEstado = document.createElement("td");
+            const estado = document.createElement("span");
+
+            estado.className = sucursal.activo
+                ? "branch-status active"
+                : "branch-status inactive";
+
+            estado.textContent = sucursal.activo
+                ? "Activa"
+                : "Inactiva";
+
+            celdaEstado.appendChild(estado);
+            fila.appendChild(celdaEstado);
+
+            cuerpoTabla.appendChild(fila);
+        });
     }
 
     function cerrarMenu() {
@@ -322,3 +492,4 @@ document.addEventListener("DOMContentLoaded", () => {
        window.lucide.createIcons();
     }
 });
+

@@ -61,6 +61,10 @@ document.addEventListener("DOMContentLoaded", () => {
            mostrarSucursales();
            return;
         }
+        if (nombre === "vehiculos") {
+            mostrarVehiculos();
+            return;
+        }
 
         const modulo = modulos[nombre];
 
@@ -490,6 +494,419 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (window.lucide) {
        window.lucide.createIcons();
+    }
+
+    async function mostrarVehiculos() {
+
+        contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Vehículos disponibles</h1>
+                <p class="page-description">
+                    Consulta y administración de vehículos disponibles para alquiler.
+                </p>
+            </div>
+        </section>
+
+        <section class="content-panel branches-panel">
+
+            <div class="branches-toolbar">
+
+                <div class="branches-search">
+                    <input
+                        type="search"
+                        id="buscar-vehiculo"
+                        placeholder="Buscar por placa, marca o modelo..."
+                        aria-label="Buscar vehículo"
+                    >
+
+                    <button
+                        type="button"
+                        id="btn-buscar-vehiculo"
+                        class="btn-search">
+                        <i data-lucide="search"></i>
+                        Buscar
+                    </button>
+                </div>
+
+                <button
+                    type="button"
+                    id="nuevo-vehiculo"
+                    class="btn-primary">
+                    <i data-lucide="plus"></i>
+                    Nuevo vehículo
+                </button>
+
+            </div>
+
+            <div class="branches-table-container">
+
+                <table class="branches-table">
+
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Placa</th>
+                            <th>Marca</th>
+                            <th>Modelo</th>
+                            <th>Año</th>
+                            <th>Sucursal</th>
+                            <th>Kilometraje</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="vehiculos-table-body">
+                        <tr>
+                            <td colspan="8">
+                                Cargando vehículos...
+                            </td>
+                        </tr>
+                    </tbody>
+
+                </table>
+
+            </div>
+
+        </section>
+    `;
+
+        const cuerpoTabla = document.getElementById("vehiculos-table-body");
+        const buscador = document.getElementById("buscar-vehiculo");
+        const botonBuscar = document.getElementById("btn-buscar-vehiculo");
+        const botonNuevoVehiculo = document.getElementById("nuevo-vehiculo");
+
+        botonNuevoVehiculo.addEventListener("click", abrirModalVehiculo);
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        try {
+            const [vehiculos, sucursales] = await Promise.all([
+                window.vehiculosAPI.obtenerDisponibles(),
+                window.sucursalesAPI.obtenerTodas()
+            ]);
+
+            const nombresSucursales = new Map(
+                sucursales.map(sucursal => [
+                    sucursal.id,
+                    sucursal.nombre
+                ])
+            );
+
+            if (!cuerpoTabla.isConnected) return;
+
+            function filtrarVehiculos() {
+                const texto = buscador.value.trim().toLowerCase();
+
+                const filtrados = vehiculos.filter(vehiculo => {
+                    return [
+                        vehiculo.placa,
+                        vehiculo.marca,
+                        vehiculo.modelo
+                    ].some(valor =>
+                        String(valor ?? "").toLowerCase().includes(texto)
+                    );
+                });
+
+                renderizarVehiculos(filtrados, cuerpoTabla, nombresSucursales);
+            }
+
+            renderizarVehiculos(vehiculos, cuerpoTabla, nombresSucursales);
+
+            botonBuscar.addEventListener("click", filtrarVehiculos);
+
+            buscador.addEventListener("keydown", evento => {
+                if (evento.key === "Enter") {
+                    evento.preventDefault();
+                    filtrarVehiculos();
+                }
+            });
+
+            buscador.addEventListener("input", () => {
+                if (!buscador.value.trim()) {
+                    renderizarVehiculos(vehiculos, cuerpoTabla, nombresSucursales);
+                }
+            });
+        } catch (error) {
+            console.error("Error al consultar vehículos:", error);
+
+            if (cuerpoTabla.isConnected) {
+                cuerpoTabla.replaceChildren();
+
+                const fila = cuerpoTabla.insertRow();
+                const celda = fila.insertCell();
+                celda.colSpan = 8;
+                celda.textContent =
+                    "No se pudieron cargar los vehículos. Verifica la conexión con el servidor.";
+            }
+        }
+    }
+
+    function renderizarVehiculos(vehiculos, cuerpoTabla, nombresSucursales) {
+
+        cuerpoTabla.replaceChildren();
+
+        if (!vehiculos.length) {
+            const fila = cuerpoTabla.insertRow();
+            const celda = fila.insertCell();
+
+            celda.colSpan = 8;
+            celda.textContent = "No se encontraron vehículos disponibles.";
+            return;
+        }
+
+        vehiculos.forEach(vehiculo => {
+
+            const fila = cuerpoTabla.insertRow();
+
+            const valores = [
+                vehiculo.id,
+                vehiculo.placa,
+                vehiculo.marca,
+                vehiculo.modelo,
+                vehiculo.anio,
+                nombresSucursales.get(vehiculo.sucursalId)
+                ?? `Sucursal #${vehiculo.sucursalId}`,
+                vehiculo.kilometraje
+            ];
+
+            valores.forEach(valor => {
+                const celda = fila.insertCell();
+                celda.textContent = valor ?? "—";
+            });
+
+            const celdaEstado = fila.insertCell();
+            const estado = document.createElement("span");
+
+            estado.className = "branch-status active";
+            estado.textContent = vehiculo.estado ?? "—";
+
+            celdaEstado.appendChild(estado);
+        });
+    }
+
+    async function abrirModalVehiculo() {
+        if (document.getElementById("modal-vehiculo")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-vehiculo";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true"
+             aria-labelledby="titulo-modal-vehiculo">
+
+            <div class="modal-header">
+                <div>
+                    <h2 id="titulo-modal-vehiculo">Nuevo vehículo</h2>
+                    <p>Registrar una nueva unidad en la flota.</p>
+                </div>
+
+                <button type="button" class="modal-close"
+                        id="cerrar-modal-vehiculo"
+                        aria-label="Cerrar formulario">&times;</button>
+            </div>
+
+            <form id="form-nuevo-vehiculo">
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label for="vehiculo-placa">Placa *</label>
+                        <input id="vehiculo-placa" name="placa"
+                               type="text" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vehiculo-marca">Marca</label>
+                        <input id="vehiculo-marca" name="marca"
+                               type="text">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vehiculo-modelo">Modelo</label>
+                        <input id="vehiculo-modelo" name="modelo"
+                               type="text">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vehiculo-anio">Año</label>
+                        <input id="vehiculo-anio" name="anio"
+                               type="number" min="1900" max="2100">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vehiculo-tipo">Tipo de vehículo *</label>
+                        <select id="vehiculo-tipo" name="tipoVehiculoId"
+                                required disabled>
+                            <option value="">Cargando tipos...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vehiculo-sucursal">Sucursal *</label>
+                        <select id="vehiculo-sucursal" name="sucursalId"
+                                required disabled>
+                            <option value="">Cargando sucursales...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="vehiculo-kilometraje">Kilometraje *</label>
+                        <input id="vehiculo-kilometraje" name="kilometraje"
+                               type="number" min="0" step="1"
+                               required>
+                    </div>
+
+                    <p id="mensaje-vehiculo" class="form-message"
+                       role="alert"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary"
+                            id="cancelar-vehiculo">Cancelar</button>
+
+                    <button type="submit" class="btn-primary"
+                            id="guardar-vehiculo" disabled>
+                        Guardar vehículo
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = modal.querySelector("#form-nuevo-vehiculo");
+        const selectorTipo = modal.querySelector("#vehiculo-tipo");
+        const selectorSucursal = modal.querySelector("#vehiculo-sucursal");
+        const botonGuardar = modal.querySelector("#guardar-vehiculo");
+        const mensaje = modal.querySelector("#mensaje-vehiculo");
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        function cerrar() {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        }
+
+        document.addEventListener("keydown", cerrarConEscape);
+
+        modal.querySelector("#cerrar-modal-vehiculo")
+            .addEventListener("click", cerrar);
+
+        modal.querySelector("#cancelar-vehiculo")
+            .addEventListener("click", cerrar);
+
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        modal.querySelector("#vehiculo-placa").focus();
+
+        try {
+            const [tipos, sucursales] = await Promise.all([
+                window.tiposVehiculoAPI.obtenerTodos(),
+                window.sucursalesAPI.obtenerActivas()
+            ]);
+
+            if (!modal.isConnected) return;
+
+            function llenarSelector(selector, elementos, etiqueta) {
+                selector.replaceChildren();
+
+                const opcionInicial = document.createElement("option");
+                opcionInicial.value = "";
+                opcionInicial.textContent = `Seleccionar ${etiqueta}`;
+                selector.appendChild(opcionInicial);
+
+                elementos.forEach(elemento => {
+                    const opcion = document.createElement("option");
+                    opcion.value = elemento.id;
+                    opcion.textContent = elemento.nombre;
+                    selector.appendChild(opcion);
+                });
+
+                selector.disabled = elementos.length === 0;
+            }
+
+            llenarSelector(selectorTipo, tipos, "tipo de vehículo");
+            llenarSelector(selectorSucursal, sucursales, "sucursal");
+
+            if (!tipos.length || !sucursales.length) {
+                mensaje.textContent =
+                    "Debe existir al menos un tipo de vehículo y una sucursal activa.";
+            } else {
+                botonGuardar.disabled = false;
+            }
+
+        } catch (error) {
+            console.error("Error al cargar catálogos:", error);
+
+            if (modal.isConnected) {
+                mensaje.textContent =
+                    "No se pudieron cargar los tipos de vehículos o las sucursales.";
+            }
+        }
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const datos = new FormData(formulario);
+
+            const vehiculo = {
+                placa: String(datos.get("placa")).trim(),
+                marca: String(datos.get("marca")).trim(),
+                modelo: String(datos.get("modelo")).trim(),
+                anio: datos.get("anio") === ""
+                    ? null
+                    : Number(datos.get("anio")),
+                tipoVehiculoId: Number(datos.get("tipoVehiculoId")),
+                sucursalId: Number(datos.get("sucursalId")),
+                kilometraje: Number(datos.get("kilometraje"))
+            };
+
+            if (!vehiculo.placa ||
+                !vehiculo.tipoVehiculoId ||
+                !vehiculo.sucursalId ||
+                !Number.isInteger(vehiculo.kilometraje) ||
+                vehiculo.kilometraje < 0) {
+                mensaje.textContent = "Verifica los campos obligatorios.";
+                return;
+            }
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Guardando...";
+            mensaje.textContent = "";
+
+            try {
+                await window.vehiculosAPI.registrar(vehiculo);
+
+                cerrar();
+
+                if (location.hash === "#vehiculos") {
+                    await mostrarVehiculos();
+                }
+
+            } catch (error) {
+                console.error("Error al registrar vehículo:", error);
+
+                if (modal.isConnected) {
+                    mensaje.textContent =
+                        "No se pudo registrar el vehículo. Verifica los datos o si la placa ya existe.";
+                }
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Guardar vehículo";
+                }
+            }
+        });
     }
 });
 

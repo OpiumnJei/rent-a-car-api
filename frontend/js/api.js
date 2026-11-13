@@ -42,3 +42,46 @@ const sucursalesAPI = {
 };
 
 window.sucursalesAPI = sucursalesAPI;
+
+const vehiculosAPI = {
+
+    obtenerDisponibles: async (sucursalId = null) => {
+        const parametros = sucursalId
+            ? `?sucursalId=${encodeURIComponent(sucursalId)}`
+            : "";
+
+        return apiRequest(`/vehiculos/disponibles${parametros}`);
+    },
+
+    registrar: async (vehiculo) => {
+        return apiRequest("/vehiculos", {
+            method: "POST",
+            body: JSON.stringify(vehiculo)
+        });
+    },
+
+    cambiarEstado: async (id, estado) => {
+        return apiRequest(`/vehiculos/${encodeURIComponent(id)}/estado`, {
+            method: "PATCH",
+            body: JSON.stringify({ estado })
+        });
+    }
+
+};
+
+window.vehiculosAPI = vehiculosAPI;
+
+const tiposVehiculoAPI = {
+    obtenerTodos: async () => {
+        return apiRequest("/tipos-vehiculo");
+    },
+
+    crear: async (tipo) => {
+        return apiRequest("/tipos-vehiculo", {
+            method: "POST",
+            body: JSON.stringify(tipo)
+        });
+    }
+};
+
+window.tiposVehiculoAPI = tiposVehiculoAPI;

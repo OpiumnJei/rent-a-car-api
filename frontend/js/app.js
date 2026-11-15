@@ -501,9 +501,9 @@ document.addEventListener("DOMContentLoaded", () => {
         contenido.innerHTML = `
         <section class="page-header">
             <div>
-                <h1>Vehículos disponibles</h1>
+                <h1>Gestion de vehiculos</h1>
                 <p class="page-description">
-                    Consulta y administración de vehículos disponibles para alquiler.
+                    Consulta y administración de toda la flota de vehículos.
                 </p>
             </div>
         </section>
@@ -527,6 +527,12 @@ document.addEventListener("DOMContentLoaded", () => {
                         <i data-lucide="search"></i>
                         Buscar
                     </button>
+                </div>
+
+                <div class="vehicle-filter">
+                        <select id="filtro-sucursal" aria-label="Filtrar por sucursal">
+                          <option value="">Todas las sucursales</option>
+                        </select>
                 </div>
 
                 <button
@@ -553,12 +559,13 @@ document.addEventListener("DOMContentLoaded", () => {
                             <th>Sucursal</th>
                             <th>Kilometraje</th>
                             <th>Estado</th>
+                            <th>Estado</th>
                         </tr>
                     </thead>
 
                     <tbody id="vehiculos-table-body">
                         <tr>
-                            <td colspan="8">
+                            <td colspan="9">
                                 Cargando vehículos...
                             </td>
                         </tr>
@@ -574,6 +581,7 @@ document.addEventListener("DOMContentLoaded", () => {
         const cuerpoTabla = document.getElementById("vehiculos-table-body");
         const buscador = document.getElementById("buscar-vehiculo");
         const botonBuscar = document.getElementById("btn-buscar-vehiculo");
+        const filtroSucursal = document.getElementById("filtro-sucursal");
         const botonNuevoVehiculo = document.getElementById("nuevo-vehiculo");
 
         botonNuevoVehiculo.addEventListener("click", abrirModalVehiculo);
@@ -584,9 +592,16 @@ document.addEventListener("DOMContentLoaded", () => {
 
         try {
             const [vehiculos, sucursales] = await Promise.all([
-                window.vehiculosAPI.obtenerDisponibles(),
+                window.vehiculosAPI.obtenerTodos(),
                 window.sucursalesAPI.obtenerTodas()
             ]);
+
+            sucursales.forEach(sucursal => {
+                const opcion = document.createElement("option");
+                opcion.value = sucursal.id;
+                opcion.textContent = sucursal.nombre;
+                filtroSucursal.appendChild(opcion);
+            });
 
             const nombresSucursales = new Map(
                 sucursales.map(sucursal => [
@@ -595,27 +610,37 @@ document.addEventListener("DOMContentLoaded", () => {
                 ])
             );
 
+
             if (!cuerpoTabla.isConnected) return;
+
+            let vehiculosActuales = vehiculos;
+            let solicitudFiltro = 0;
 
             function filtrarVehiculos() {
                 const texto = buscador.value.trim().toLowerCase();
 
-                const filtrados = vehiculos.filter(vehiculo => {
-                    return [
+                const resultados = vehiculosActuales.filter(vehiculo => {
+                    const campos = [
                         vehiculo.placa,
                         vehiculo.marca,
                         vehiculo.modelo
-                    ].some(valor =>
+                    ];
+
+                    return campos.some(valor =>
                         String(valor ?? "").toLowerCase().includes(texto)
                     );
                 });
 
-                renderizarVehiculos(filtrados, cuerpoTabla, nombresSucursales);
+                renderizarVehiculos(
+                    resultados,
+                    cuerpoTabla,
+                    nombresSucursales
+                );
             }
 
-            renderizarVehiculos(vehiculos, cuerpoTabla, nombresSucursales);
-
             botonBuscar.addEventListener("click", filtrarVehiculos);
+
+            buscador.addEventListener("input", filtrarVehiculos);
 
             buscador.addEventListener("keydown", evento => {
                 if (evento.key === "Enter") {
@@ -624,11 +649,36 @@ document.addEventListener("DOMContentLoaded", () => {
                 }
             });
 
-            buscador.addEventListener("input", () => {
-                if (!buscador.value.trim()) {
-                    renderizarVehiculos(vehiculos, cuerpoTabla, nombresSucursales);
+            filtroSucursal.addEventListener("change", async () => {
+                const sucursalId = filtroSucursal.value || null;
+                const solicitudActual = ++solicitudFiltro;
+
+                filtroSucursal.disabled = true;
+
+                try {
+                    const resultado =
+                        await window.vehiculosAPI.obtenerTodos(sucursalId);
+
+                    if (!cuerpoTabla.isConnected ||
+                        solicitudActual !== solicitudFiltro) {
+                        return;
+                    }
+
+                    vehiculosActuales = resultado;
+                    filtrarVehiculos();
+
+                } catch (error) {
+                    console.error("Error al filtrar vehículos:", error);
+                    alert("No se pudieron consultar los vehículos.");
+                } finally {
+                    if (solicitudActual === solicitudFiltro &&
+                        filtroSucursal.isConnected) {
+                        filtroSucursal.disabled = false;
+                    }
                 }
             });
+
+            filtrarVehiculos();
         } catch (error) {
             console.error("Error al consultar vehículos:", error);
 
@@ -652,8 +702,8 @@ document.addEventListener("DOMContentLoaded", () => {
             const fila = cuerpoTabla.insertRow();
             const celda = fila.insertCell();
 
-            celda.colSpan = 8;
-            celda.textContent = "No se encontraron vehículos disponibles.";
+            celda.colSpan = 9;
+            celda.textContent = "No se encontraron vehículos.";
             return;
         }
 
@@ -681,9 +731,150 @@ document.addEventListener("DOMContentLoaded", () => {
             const estado = document.createElement("span");
 
             estado.className = "branch-status active";
-            estado.textContent = vehiculo.estado ?? "—";
+            estado.textContent =
+                (vehiculo.estado ?? "DESCONOCIDO")
+                    .replaceAll("_", " ");
 
             celdaEstado.appendChild(estado);
+
+            const celdaAcciones = fila.insertCell();
+            const botonEstado = document.createElement("button");
+
+            botonEstado.type = "button";
+            botonEstado.className = "btn-search";
+            botonEstado.textContent = "Cambiar estado";
+
+            botonEstado.addEventListener("click", () => {
+                abrirModalEstadoVehiculo(vehiculo);
+            });
+
+            celdaAcciones.appendChild(botonEstado);
+        });
+    }
+
+    function abrirModalEstadoVehiculo(vehiculo) {
+
+        if (document.getElementById("modal-estado-vehiculo")) {
+            return;
+        }
+
+        const modal = document.createElement("div");
+
+        modal.id = "modal-estado-vehiculo";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="estado-modal-card" role="dialog"
+          aria-modal="true"
+          aria-labelledby="titulo-modal-estado">
+
+        <div class="estado-modal-header">
+            <div>
+                <h2 id="titulo-modal-estado">Cambiar estado</h2>
+                <p>Actualiza la condición operativa del vehículo.</p>
+            </div>
+
+            <button type="button"
+                    id="cerrar-modal-estado"
+                    class="estado-modal-close"
+                    aria-label="Cerrar">
+                &times;
+            </button>
+        </div>
+
+        <form id="form-estado-vehiculo">
+
+            <div class="estado-modal-body">
+
+                <div class="estado-vehiculo-info">
+                    <span>VEHÍCULO SELECCIONADO</span>
+                    <strong id="vehiculo-estado-descripcion"></strong>
+                </div>
+
+                <div class="estado-modal-field">
+                    <label for="nuevo-estado-vehiculo">
+                        Nuevo estado
+                    </label>
+
+                    <select id="nuevo-estado-vehiculo" required>
+                        <option value="DISPONIBLE">Disponible</option>
+                        <option value="ALQUILADO">Alquilado</option>
+                        <option value="EN_MANTENIMIENTO">
+                            En mantenimiento
+                        </option>
+                        <option value="AVERIADO">Averiado</option>
+                    </select>
+                </div>
+
+            </div>
+
+            <div class="estado-modal-footer">
+                <button type="button"
+                        id="cancelar-estado-vehiculo"
+                        class="estado-btn-cancelar">
+                    Cancelar
+                </button>
+
+                <button type="submit"
+                        id="guardar-estado-vehiculo"
+                        class="estado-btn-guardar">
+                    Guardar cambios
+                </button>
+            </div>
+
+          </form>
+        </div>
+`;
+
+        document.body.appendChild(modal);
+
+        document.getElementById("cerrar-modal-estado")
+            .addEventListener("click", () => modal.remove());
+
+        document.getElementById("vehiculo-estado-descripcion")
+            .textContent = `${vehiculo.marca ?? ""} ${vehiculo.modelo ?? ""} - ${vehiculo.placa}`;
+
+        const selector = document.getElementById("nuevo-estado-vehiculo");
+        const formulario = document.getElementById("form-estado-vehiculo");
+        const botonGuardar = document.getElementById("guardar-estado-vehiculo");
+
+        selector.value = vehiculo.estado;
+
+        document.getElementById("cancelar-estado-vehiculo")
+            .addEventListener("click", () => modal.remove());
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const nuevoEstado = selector.value;
+
+            if (nuevoEstado === vehiculo.estado) {
+                modal.remove();
+                return;
+            }
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Guardando...";
+
+            try {
+                await window.vehiculosAPI.cambiarEstado(
+                    vehiculo.id,
+                    nuevoEstado
+                );
+
+                modal.remove();
+
+                await mostrarVehiculos();
+
+            } catch (error) {
+                console.error("Error al cambiar estado:", error);
+                alert("No se pudo actualizar el estado del vehículo.");
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Guardar cambios";
+                }
+            }
         });
     }
 

@@ -75,6 +75,12 @@ public class VehiculoService implements VehiculoUseCase {
 
     @Override
     @Transactional(readOnly = true)
+    public Result<List<Vehiculo>> listarTodos(Long sucursalId) {
+        return Result.ok(vehiculos.listarPorSucursal(sucursalId));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
     public Result<Vehiculo> buscarPorId(Long id) {
         var v = vehiculos.buscarPorId(id);
         if (v.isEmpty()) {

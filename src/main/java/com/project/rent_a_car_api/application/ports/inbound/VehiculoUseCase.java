@@ -18,6 +18,8 @@ public interface VehiculoUseCase {
     Result<Vehiculo> cambiarEstado(Long vehiculoId, EstadoVehiculo nuevoEstado);
 
     Result<List<Vehiculo>> listarDisponibles(Long sucursalId);
+    
+    Result<List<Vehiculo>> listarTodos(Long sucursalId);
 
     Result<Vehiculo> buscarPorId(Long id);
 }

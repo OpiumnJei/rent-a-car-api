@@ -41,6 +41,34 @@ public class VehiculoController {
         this.vehiculos = vehiculos;
     }
 
+    /** Listado completo de la flota, sin filtrar por estado. */
+    @Operation(
+        summary = "Listar todos los vehiculos",
+        description = "Consulta toda la flota, con filtro opcional por sucursal"
+    )
+    @ApiResponses({
+        @ApiResponse(responseCode = "200", description = "Listado obtenido")
+    })
+    @GetMapping
+    public List<Responses.VehiculoResponse> listarTodos(
+        @Parameter(
+                description = "Id de sucursal (vacio = todas)",
+                example = "1"
+        )
+        @RequestParam(required = false) Long sucursalId) {
+
+    var r = vehiculos.listarTodos(sucursalId);
+
+    if (r.isFailure()) {
+        throw new DomainException(r.getError());
+    }
+
+    return r.getValue()
+            .stream()
+            .map(Responses.VehiculoResponse::desde)
+            .toList();
+    }
+
     /** Disponibilidad por sucursal. Por que: endpoint SRS /vehiculos/disponibles. */
     @Operation(summary = "Vehiculos disponibles", description = "Filtra disponibles por sucursal para cotizar reservas (RF-01.4)")
     @ApiResponses({

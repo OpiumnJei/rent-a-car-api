@@ -1408,3 +1408,323 @@ button, a {
     color: #64748b;
     cursor: not-allowed;
 }
+
+.vehicle-filter label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.vehicle-filter select {
+    height: 42px;
+    padding: 0 12px;
+    border: 1px solid #d9dee5;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #202630;
+    font-size: 13px;
+}
+
+.vehicle-filter select:focus {
+    outline: none;
+    border-color: #cf202f;
+}
+
+.vehicle-filter {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    flex: 0 0 190px;
+    min-width: 0;
+}
+
+.vehicle-filter label {
+    font-size: 12px;
+    font-weight: 600;
+    color: #374151;
+}
+
+.vehicle-filter select {
+    width: 100%;
+    height: 42px;
+    box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+    .branches-toolbar:has(.vehicle-filter) {
+        flex-wrap: wrap;
+    }
+
+    .vehicle-filter {
+        flex: 1 1 190px;
+    }
+}
+
+.branches-toolbar:has(.vehicle-filter) > .btn-primary {
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+
+@media (max-width: 950px) {
+    .branches-toolbar:has(.vehicle-filter) {
+        flex-wrap: wrap;
+    }
+
+    .branches-toolbar:has(.vehicle-filter) .branches-search {
+        flex: 1 1 100%;
+    }
+
+    .branches-toolbar .vehicle-filter {
+        flex: 1 1 190px;
+    }
+}
+
+.branches-toolbar:has(.vehicle-filter) > .btn-primary,
+.branches-toolbar:has(.vehicle-filter) .branches-search input {
+    height: 44px;
+    box-sizing: border-box;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+@media (max-width: 950px) {
+    .branches-toolbar:has(.vehicle-filter) {
+        flex-wrap: wrap;
+    }
+
+    .branches-toolbar:has(.vehicle-filter) .branches-search {
+        flex: 1 1 100%;
+    }
+
+    .branches-toolbar:has(.vehicle-filter) .vehicle-filter {
+        flex: 1 1 190px;
+    }
+}
+
+.branches-toolbar:has(.vehicle-filter) {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+}
+
+.branches-toolbar:has(.vehicle-filter) .branches-search,
+.branches-toolbar:has(.vehicle-filter) .vehicle-filter,
+.branches-toolbar:has(.vehicle-filter) > .btn-primary {
+    align-self: center;
+    margin-top: 0;
+    margin-bottom: 0;
+    transform: none;
+}
+
+.branches-toolbar:has(.vehicle-filter) .vehicle-filter {
+    gap: 0;
+}
+
+.branches-toolbar:has(.vehicle-filter) .vehicle-filter select {
+    display: block;
+    height: 44px;
+    margin: 0;
+}
+
+.branches-toolbar:not(:has(.vehicle-filter)) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+}
+
+.branches-toolbar:not(:has(.vehicle-filter)) .branches-search {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex: 1 1 auto;
+    min-width: 0;
+    margin: 0;
+    transform: none;
+}
+
+.branches-toolbar:not(:has(.vehicle-filter)) .branches-search input,
+.branches-toolbar:not(:has(.vehicle-filter)) .btn-search,
+.branches-toolbar:not(:has(.vehicle-filter)) > .btn-primary {
+    height: 44px;
+    box-sizing: border-box;
+    margin-top: 0;
+    margin-bottom: 0;
+}
+
+.branches-toolbar:not(:has(.vehicle-filter)) > .btn-primary {
+    align-self: center;
+    flex-shrink: 0;
+    white-space: nowrap;
+    transform: none;
+}
+
+@media (max-width: 700px) {
+    .branches-toolbar:not(:has(.vehicle-filter)) {
+        flex-wrap: wrap;
+    }
+
+    .branches-toolbar:not(:has(.vehicle-filter)) .branches-search {
+        flex: 1 1 100%;
+    }
+
+    .branches-toolbar:not(:has(.vehicle-filter)) > .btn-primary {
+        margin-left: auto;
+    }
+}
+
+#modal-estado-vehiculo .estado-modal-field select:focus {
+    outline: none;
+    border-color: #c9152c;
+    box-shadow: 0 0 0 3px rgba(201, 21, 44, 0.12);
+}
+
+#modal-estado-vehiculo .estado-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 18px 26px 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+#modal-estado-vehiculo .estado-btn-cancelar,
+#modal-estado-vehiculo .estado-btn-guardar {
+    min-height: 42px;
+    padding: 0 17px;
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#modal-estado-vehiculo .estado-btn-cancelar {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+}
+
+#modal-estado-vehiculo .estado-btn-guardar {
+    background: #c9152c;
+    border: 1px solid #c9152c;
+    color: #ffffff;
+}
+
+#modal-estado-vehiculo .estado-btn-guardar:hover {
+    background: #a91024;
+}
+
+#modal-estado-vehiculo .estado-btn-guardar:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 480px) {
+    #modal-estado-vehiculo .estado-modal-header,
+    #modal-estado-vehiculo .estado-modal-body {
+        padding: 20px;
+    }
+
+    #modal-estado-vehiculo .estado-modal-footer {
+        padding: 16px 20px 20px;
+        flex-wrap: wrap;
+    }
+}
+
+#modal-estado-vehiculo .estado-modal-card {
+    width: 100%;
+    max-width: 460px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: #ffffff;
+    border-radius: 16px;
+    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.25);
+    color: #1f2937;
+}
+
+#modal-estado-vehiculo .estado-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    padding: 24px 26px 20px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+#modal-estado-vehiculo .estado-modal-header h2 {
+    margin: 0 0 6px;
+    font-size: 21px;
+    color: #182132;
+}
+
+#modal-estado-vehiculo .estado-modal-header p {
+    margin: 0;
+    font-size: 13px;
+    color: #6b7280;
+}
+
+#modal-estado-vehiculo .estado-modal-close {
+    border: none;
+    background: transparent;
+    font-size: 26px;
+    cursor: pointer;
+}
+
+#modal-estado-vehiculo .estado-modal-body {
+    padding: 24px 26px;
+}
+
+#modal-estado-vehiculo .estado-vehiculo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
+    background: #f3f4f6;
+    border-radius: 10px;
+}
+
+#modal-estado-vehiculo .estado-modal-field label {
+    display: block;
+    margin-bottom: 8px;
+    font-weight: 600;
+}
+
+#modal-estado-vehiculo .estado-modal-field select {
+    width: 100%;
+    height: 46px;
+    padding: 0 12px;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    background: white;
+    box-sizing: border-box;
+}
+
+#modal-estado-vehiculo .estado-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    padding: 18px 26px 24px;
+    border-top: 1px solid #e5e7eb;
+}
+
+#modal-estado-vehiculo .estado-btn-cancelar,
+#modal-estado-vehiculo .estado-btn-guardar {
+    padding: 12px 18px;
+    border-radius: 8px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+#modal-estado-vehiculo .estado-btn-cancelar {
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    color: #374151;
+}
+
+#modal-estado-vehiculo .estado-btn-guardar {
+    background: #c9152c;
+    border: 1px solid #c9152c;
+    color: white;
+}

@@ -40,7 +40,18 @@ public class VehiculoPersistenceAdapter implements VehiculoRepositoryPort {
 
     @Override
     public List<Vehiculo> listarPorSucursal(Long sucursalId) {
-        return jpa.findBySucursalId(sucursalId).stream().map(this::aDominio).toList();
+
+      if (sucursalId == null) {
+        return jpa.findAll()
+                  .stream()
+                  .map(this::aDominio)
+                  .toList();
+        }
+
+        return jpa.findBySucursalId(sucursalId)
+              .stream()
+              .map(this::aDominio)
+              .toList();
     }
 
     @Override

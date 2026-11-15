@@ -45,6 +45,14 @@ window.sucursalesAPI = sucursalesAPI;
 
 const vehiculosAPI = {
 
+    obtenerTodos: async (sucursalId = null) => {
+    const parametros = sucursalId
+        ? `?sucursalId=${encodeURIComponent(sucursalId)}`
+        : "";
+
+    return apiRequest(`/vehiculos${parametros}`);
+    },
+
     obtenerDisponibles: async (sucursalId = null) => {
         const parametros = sucursalId
             ? `?sucursalId=${encodeURIComponent(sucursalId)}`

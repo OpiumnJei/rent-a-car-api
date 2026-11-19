@@ -41,6 +41,19 @@ public class LicenciaPersistenceAdapter implements LicenciaRepositoryPort {
     }
 
     @Override
+    public Optional<Licencia> buscarPorNumero(String numero) {
+    return licencias.findByNumero(numero)
+            .map(e -> new Licencia(
+                    e.getId(),
+                    e.getClienteId(),
+                    e.getNumero(),
+                    e.getFechaExpiracion(),
+                    e.getCategoria(),
+                    e.isActiva()
+            ));
+    }
+
+    @Override
     public List<Licencia> listarPorCliente(Long clienteId) {
         return licencias.findByClienteId(clienteId).stream()
                 .map(e -> new Licencia(e.getId(), e.getClienteId(), e.getNumero(), e.getFechaExpiracion(), e.getCategoria(), e.isActiva())).toList();

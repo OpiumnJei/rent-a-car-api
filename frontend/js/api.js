@@ -93,3 +93,53 @@ const tiposVehiculoAPI = {
 };
 
 window.tiposVehiculoAPI = tiposVehiculoAPI;
+
+const clientesAPI = {
+
+    obtenerTodos: async () => {
+        return apiRequest("/clientes");
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/clientes/${encodeURIComponent(id)}`);
+    },
+
+    buscarPorDocumento: async (documento) => {
+        return apiRequest(
+            `/clientes/documento/${encodeURIComponent(documento)}`
+        );
+    },
+
+    registrar: async (cliente) => {
+        return apiRequest("/clientes", {
+            method: "POST",
+            body: JSON.stringify(cliente)
+        });
+    },
+
+    obtenerLicencias: async (clienteId) => {
+        return apiRequest(
+            `/clientes/${encodeURIComponent(clienteId)}/licencias`
+        );
+    },
+
+    registrarLicencia: async (licencia) => {
+        return apiRequest("/licencias", {
+            method: "POST",
+            body: JSON.stringify(licencia)
+        });
+    },
+
+    actualizarLicencia: async (id, licencia) => {
+        return apiRequest(
+            `/licencias/${encodeURIComponent(id)}`,
+            {
+                method: "PUT",
+                body: JSON.stringify(licencia)
+            }
+        );
+    }
+
+};
+
+window.clientesAPI = clientesAPI;

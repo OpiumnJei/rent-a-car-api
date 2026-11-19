@@ -1237,7 +1237,9 @@ button, a {
     align-items: center;
 
     padding: 20px;
-    background: rgba(15, 23, 42, 0.65);
+    background: rgba(15, 20, 27, 0.68);
+    backdrop-filter: blur(3px);
+    -webkit-backdrop-filter: blur(3px);
 }
 
 .modal-container {
@@ -1727,4 +1729,185 @@ button, a {
     background: #c9152c;
     border: 1px solid #c9152c;
     color: white;
+}
+
+.client-modal-overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 2000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    background: rgba(15, 20, 27, 0.68);
+    backdrop-filter: blur(3px);
+}
+
+.client-modal {
+    width: 100%;
+    max-width: 620px;
+    max-height: calc(100vh - 40px);
+    overflow-y: auto;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+}
+
+.client-modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 20px;
+    padding: 26px 30px;
+    border-bottom: 1px solid #e5e7eb;
+}
+
+.client-modal-header h2 {
+    margin: 0 0 6px;
+    color: #20252d;
+    font-size: 23px;
+}
+
+.client-modal-header p {
+    margin: 0;
+    color: #737b86;
+    font-size: 13px;
+}
+
+.client-modal-close {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    flex-shrink: 0;
+    border: none;
+    border-radius: 7px;
+    background: #f1f2f4;
+    color: #343a43;
+    cursor: pointer;
+}
+
+.client-modal-body {
+    padding: 26px 30px;
+}
+
+.client-form-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 20px;
+}
+
+.client-form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.client-form-full {
+    grid-column: 1 / -1;
+}
+
+.client-form-field label {
+    color: #343a43;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.client-form-field input {
+    width: 100%;
+    min-width: 0;
+    height: 43px;
+    padding: 0 12px;
+    border: 1px solid #d8dce1;
+    border-radius: 7px;
+    background: #fff;
+    color: #20252d;
+    font: inherit;
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
+.client-form-field input:focus {
+    outline: none;
+    border-color: #c62828;
+    box-shadow: 0 0 0 3px rgba(198, 40, 40, 0.1);
+}
+
+.client-form-message {
+    margin: 15px 0 0;
+    color: #b42318;
+    font-size: 13px;
+}
+
+.client-form-message:empty {
+    display: none;
+}
+
+.client-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    padding: 20px 30px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.client-modal-footer button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+@media (max-width: 600px) {
+    .client-form-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .client-form-full {
+        grid-column: auto;
+    }
+
+    .client-modal-header,
+    .client-modal-body,
+    .client-modal-footer {
+        padding: 20px;
+    }
+}
+
+.licenses-modal {
+    max-width: 760px;
+}
+
+.licenses-table-container {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.licenses-table-container .branches-table {
+    width: 100%;
+    min-width: 520px;
+}
+
+.license-status {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.license-status-valid {
+    background: #e5f6ec;
+    color: #16803c;
+}
+
+.license-status-expired {
+    background: #fde8e8;
+    color: #b42318;
+}
+
+.license-status-inactive {
+    background: #edf0f3;
+    color: #667085;
 }

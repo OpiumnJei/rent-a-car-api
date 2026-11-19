@@ -20,4 +20,12 @@ public interface ClienteUseCase {
     Result<List<Licencia>> licenciasDeCliente(Long clienteId);
 
     Result<Cliente> buscarPorId(Long id);
+
+    Result<Cliente> buscarPorDocumento(String documento);
+
+    Result<List<Cliente>> listarTodos();
+
+    Result<Licencia> actualizarLicencia(Long id, String numero, LocalDate fechaExpiracion, String categoria);
 }
+
+

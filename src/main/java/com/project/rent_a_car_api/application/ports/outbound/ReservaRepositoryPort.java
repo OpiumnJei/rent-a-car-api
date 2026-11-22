@@ -16,6 +16,8 @@ public interface ReservaRepositoryPort {
     Optional<Reserva> buscarPorId(Long id);
 
     List<Reserva> listarPorVehiculo(Long vehiculoId);
+    
+    List<Reserva> listarTodas();
 
     boolean existeSolape(Long vehiculoId, LocalDate inicio, LocalDate fin);
 }

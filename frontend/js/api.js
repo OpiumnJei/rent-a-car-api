@@ -10,9 +10,23 @@ async function apiRequest(endpoint, options = {}) {
     });
 
     if (!response.ok) {
-        throw new Error(
-            `Error al comunicarse con el servidor: ${response.status}`
-        );
+        let mensajeError = `Error HTTP ${response.status}`;
+
+        try {
+            const errorData = await response.json();
+
+            mensajeError =
+                errorData.message ||
+                errorData.mensaje ||
+                errorData.detail ||
+                errorData.error ||
+                mensajeError;
+
+        } catch (error) {
+            console.error("No se pudo leer el error del servidor:", error);
+        }
+
+        throw new Error(mensajeError);
     }
 
     if (response.status === 204) {
@@ -93,3 +107,76 @@ const tiposVehiculoAPI = {
 };
 
 window.tiposVehiculoAPI = tiposVehiculoAPI;
+
+const clientesAPI = {
+
+    obtenerTodos: async () => {
+        return apiRequest("/clientes");
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/clientes/${encodeURIComponent(id)}`);
+    },
+
+    buscarPorDocumento: async (documento) => {
+        return apiRequest(
+            `/clientes/documento/${encodeURIComponent(documento)}`
+        );
+    },
+
+    registrar: async (cliente) => {
+        return apiRequest("/clientes", {
+            method: "POST",
+            body: JSON.stringify(cliente)
+        });
+    },
+
+    obtenerLicencias: async (clienteId) => {
+        return apiRequest(
+            `/clientes/${encodeURIComponent(clienteId)}/licencias`
+        );
+    },
+
+    registrarLicencia: async (licencia) => {
+        return apiRequest("/licencias", {
+            method: "POST",
+            body: JSON.stringify(licencia)
+        });
+    },
+
+    actualizarLicencia: async (id, licencia) => {
+        return apiRequest(
+            `/licencias/${encodeURIComponent(id)}`,
+            {
+                method: "PUT",
+                body: JSON.stringify(licencia)
+            }
+        );
+    }
+
+};
+
+window.clientesAPI = clientesAPI;
+
+const reservasAPI = {
+    crear: async (reserva) => {
+        return apiRequest("/reservas", {
+            method: "POST",
+            body: JSON.stringify(reserva)
+        });
+    },
+
+    obtenerTodas: async () => {
+        return apiRequest("/reservas");
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/reservas/${encodeURIComponent(id)}`);
+    },
+
+    obtenerTarifas: async () => {
+        return apiRequest("/tarifas");
+    }
+};
+
+window.reservasAPI = reservasAPI;

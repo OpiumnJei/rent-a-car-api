@@ -58,4 +58,20 @@ public class ReservaPersistenceAdapter implements ReservaRepositoryPort {
         // Por que: delega al query JPQL para RF-03.2 sin cargar reservas.
         return reservas.existeSolape(vehiculoId, inicio, fin);
     }
+
+    @Override
+    public List<Reserva> listarTodas() {
+    return reservas.findAll().stream()
+            .map(g -> new Reserva(
+                    g.getId(),
+                    g.getClienteId(),
+                    g.getVehiculoId(),
+                    g.getLicenciaId(),
+                    g.getFechaInicio(),
+                    g.getFechaFin(),
+                    EstadoReserva.valueOf(g.getEstado()),
+                    g.getTotalEstimado()
+            ))
+            .toList();
+    }
 }

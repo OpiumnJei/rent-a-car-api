@@ -10,9 +10,23 @@ async function apiRequest(endpoint, options = {}) {
     });
 
     if (!response.ok) {
-        throw new Error(
-            `Error al comunicarse con el servidor: ${response.status}`
-        );
+        let mensajeError = `Error HTTP ${response.status}`;
+
+        try {
+            const errorData = await response.json();
+
+            mensajeError =
+                errorData.message ||
+                errorData.mensaje ||
+                errorData.detail ||
+                errorData.error ||
+                mensajeError;
+
+        } catch (error) {
+            console.error("No se pudo leer el error del servidor:", error);
+        }
+
+        throw new Error(mensajeError);
     }
 
     if (response.status === 204) {
@@ -143,3 +157,26 @@ const clientesAPI = {
 };
 
 window.clientesAPI = clientesAPI;
+
+const reservasAPI = {
+    crear: async (reserva) => {
+        return apiRequest("/reservas", {
+            method: "POST",
+            body: JSON.stringify(reserva)
+        });
+    },
+
+    obtenerTodas: async () => {
+        return apiRequest("/reservas");
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/reservas/${encodeURIComponent(id)}`);
+    },
+
+    obtenerTarifas: async () => {
+        return apiRequest("/tarifas");
+    }
+};
+
+window.reservasAPI = reservasAPI;

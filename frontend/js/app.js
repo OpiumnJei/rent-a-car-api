@@ -69,6 +69,10 @@ document.addEventListener("DOMContentLoaded", () => {
             mostrarClientes();
             return;
         }
+        if (nombre === "reservas") {
+            mostrarReservas();
+            return;
+        }
 
         const modulo = modulos[nombre];
 
@@ -102,6 +106,825 @@ document.addEventListener("DOMContentLoaded", () => {
         contenido.append(encabezado, panel);
     }
 
+    async function mostrarReservas() {
+        contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Gestión de reservas</h1>
+                <p class="page-description">
+                    Administración y seguimiento de reservas
+                    de vehículos.
+                </p>
+            </div>
+        </section>
+
+        <section class="reservas-stats">
+            <div class="reserva-stat-card">
+                <div class="reserva-stat-icon">
+                    <i data-lucide="calendar-days"></i>
+                </div>
+                <div>
+                    <span>Total de reservas</span>
+                    <strong id="reservas-total">—</strong>
+                </div>
+            </div>
+
+            <div class="reserva-stat-card">
+                <div class="reserva-stat-icon">
+                    <i data-lucide="check-circle"></i>
+                </div>
+                <div>
+                    <span>Confirmadas</span>
+                    <strong id="reservas-confirmadas">—</strong>
+                </div>
+            </div>
+
+            <div class="reserva-stat-card">
+                <div class="reserva-stat-icon">
+                    <i data-lucide="clock"></i>
+                </div>
+                <div>
+                    <span>Pendientes</span>
+                    <strong id="reservas-pendientes">—</strong>
+                </div>
+            </div>
+        </section>
+
+        <div class="reservas-section-heading">
+            <h3>Reservas registradas</h3>
+            <p>Consulta las operaciones de alquiler.</p>
+        </div>
+
+        <section class="content-panel branches-panel reservas-list-panel">
+            <div class="branches-toolbar reservas-list-toolbar">
+                <div class="reservas-search-input">
+                    <i data-lucide="search"></i>
+                    <input
+                        type="search"
+                        id="buscar-reservas"
+                        placeholder="Buscar por cliente, documento, reserva o vehículo..."
+                        autocomplete="off"
+                        aria-label="Buscar reservas"
+                    >
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-primary"
+                    id="btn-nueva-reserva"
+                >
+                    <i data-lucide="calendar-plus"></i>
+                    Nueva reserva
+                </button>
+            </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Cliente</th>
+                            <th>Vehículo</th>
+                            <th>Fecha de inicio</th>
+                            <th>Fecha de finalización</th>
+                            <th>Estado</th>
+                            <th>Total estimado</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="reservas-table-body">
+                        <tr>
+                            <td colspan="7">
+                                <div class="reservas-empty">
+                                    <i data-lucide="calendar-search"></i>
+                                    <h3>Listado pendiente de conexión</h3>
+                                    <p>
+                                        Próximamente podrás consultar
+                                        las reservas registradas.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        document
+            .getElementById("btn-nueva-reserva")
+            .addEventListener("click", abrirModalNuevaReserva);
+
+        await cargarListadoReservas();
+    }
+
+    async function cargarListadoReservas() {
+        const tbody = document.getElementById("reservas-table-body");
+
+        if (!tbody) return;
+
+        try {
+            const [reservas, clientes, vehiculos] = await Promise.all([
+                window.reservasAPI.obtenerTodas(),
+                window.clientesAPI.obtenerTodos(),
+                window.vehiculosAPI.obtenerTodos()
+            ]);
+
+            if (!tbody.isConnected) return;
+
+            const clientesPorId = new Map(
+                clientes.map(cliente => [Number(cliente.id), cliente])
+            );
+
+            const vehiculosPorId = new Map(
+                vehiculos.map(vehiculo => [Number(vehiculo.id), vehiculo])
+            );
+
+            const buscador = document.getElementById("buscar-reservas");
+
+            const normalizarBusqueda = valor => String(valor ?? "")
+                .normalize("NFD")
+                .replace(/[\u0300-\u036f]/g, "")
+                .toLowerCase()
+                .trim();
+
+            const obtenerTextoBusqueda = reserva => {
+                const cliente = clientesPorId.get(Number(reserva.clienteId));
+                const vehiculo = vehiculosPorId.get(Number(reserva.vehiculoId));
+
+                const codigo = `RES-${String(reserva.id).padStart(6, "0")}`;
+
+                return normalizarBusqueda([
+                    reserva.id,
+                    codigo,
+                    cliente?.nombre,
+                    cliente?.apellido,
+                    cliente?.documento,
+                    vehiculo?.marca,
+                    vehiculo?.modelo,
+                    vehiculo?.anio,
+                    vehiculo?.placa
+                ].join(" "));
+            };
+
+            const escaparHTML = valor => String(valor ?? "").replace(
+                /[&<>"']/g,
+                caracter => ({
+                    "&": "&amp;",
+                    "<": "&lt;",
+                    ">": "&gt;",
+                    '"': "&quot;",
+                    "'": "&#39;"
+                })[caracter]
+            );
+
+            const total = reservas.length;
+            const confirmadas = reservas.filter(
+                reserva => reserva.estado === "CONFIRMADA"
+            ).length;
+
+            const pendientes = reservas.filter(
+                reserva => reserva.estado === "PENDIENTE"
+            ).length;
+
+            document.getElementById("reservas-total").textContent = total;
+            document.getElementById("reservas-confirmadas").textContent = confirmadas;
+            document.getElementById("reservas-pendientes").textContent = pendientes;
+
+            if (total === 0) {
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="7">
+                        <div class="reservas-empty">
+                            <h3>No hay reservas registradas</h3>
+                            <p>Registra una nueva reserva para comenzar.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+                return;
+            }
+
+            const formatoMoneda = new Intl.NumberFormat("es-DO", {
+                style: "currency",
+                currency: "DOP"
+            });
+
+            const formatoFecha = fecha => {
+                if (!fecha) return "—";
+
+                const [anio, mes, dia] = fecha.split("-");
+                return `${dia}/${mes}/${anio}`;
+            };
+
+            const renderizarReservas = reservasFiltradas => {
+                tbody.innerHTML = reservasFiltradas.map(reserva => {
+                const cliente = clientesPorId.get(Number(reserva.clienteId));
+                const vehiculo = vehiculosPorId.get(Number(reserva.vehiculoId));
+
+                const nombreCliente = cliente
+                    ? [cliente.nombre, cliente.apellido]
+                        .filter(Boolean)
+                        .join(" ")
+                    : `Cliente ${reserva.clienteId}`;
+
+                const nombreVehiculo = vehiculo
+                    ? [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
+                        .filter(Boolean)
+                        .join(" ")
+                    : `Vehículo ${reserva.vehiculoId}`;
+
+                const placa = vehiculo?.placa ?? "";
+
+                const codigo = `RES-${String(reserva.id).padStart(6, "0")}`;
+
+                return `
+                <tr>
+                    <td>
+                        <span class="reserva-codigo">
+                            ${escaparHTML(codigo)}
+                        </span>
+                    </td>
+
+                    <td>${escaparHTML(nombreCliente)}</td>
+
+                    <td>
+                        <div class="reserva-vehiculo-info">
+                            <strong>${escaparHTML(nombreVehiculo)}</strong>
+                            <small>${escaparHTML(placa)}</small>
+                        </div>
+                    </td>
+
+                    <td>${formatoFecha(reserva.inicio)}</td>
+                    <td>${formatoFecha(reserva.fin)}</td>
+                    <td>${escaparHTML(reserva.estado)}</td>
+                    <td>${formatoMoneda.format(reserva.total)}</td>
+                    <td>
+                    <button
+                        type="button"
+                        class="btn-ver-reserva"
+                        data-reserva-id="${Number(reserva.id)}"
+                    >
+                        <i data-lucide="eye"></i>
+                        Ver detalles
+                    </button>
+                    </td>
+                </tr>
+            `;
+            }).join("");
+
+                if (reservasFiltradas.length === 0) {
+                    tbody.innerHTML = `
+                <tr>
+                    <td colspan="8" style="text-align:center; padding:30px;">
+                        No se encontraron reservas que coincidan con la búsqueda.
+                    </td>
+                </tr>
+                `;
+                }
+            };
+
+            renderizarReservas(reservas);
+
+            tbody.addEventListener("click", async evento => {
+                const boton = evento.target.closest(".btn-ver-reserva");
+
+                if (!boton) return;
+
+                const reservaId = Number(boton.dataset.reservaId);
+
+                if (!Number.isInteger(reservaId) || reservaId <= 0) return;
+
+                await abrirDetalleReserva(reservaId);
+            });
+
+            buscador?.addEventListener("input", () => {
+                const texto = normalizarBusqueda(buscador.value);
+
+                const resultados = reservas.filter(reserva =>
+                    obtenerTextoBusqueda(reserva).includes(texto)
+                );
+
+                renderizarReservas(resultados);
+            });
+
+        } catch (error) {
+            console.error("Error al cargar reservas:", error);
+
+            if (tbody.isConnected) {
+                tbody.innerHTML = `
+                <tr>
+                    <td colspan="8">
+                        <div class="reservas-empty">
+                            <h3>No se pudieron cargar las reservas</h3>
+                            <p>Verifica la conexión con el servidor.</p>
+                        </div>
+                    </td>
+                </tr>
+            `;
+            }
+        }
+    }
+
+    async function abrirDetalleReserva(reservaId) {
+        if (document.getElementById("modal-detalle-reserva")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-detalle-reserva";
+        modal.className = "client-modal-overlay";
+
+        const escaparHTML = valor => String(valor ?? "").replace(
+            /[&<>"']/g,
+            caracter => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            })[caracter]
+        );
+
+        const formatoFecha = fecha => {
+            if (!fecha) return "—";
+            const [anio, mes, dia] = fecha.split("-");
+            return `${dia}/${mes}/${anio}`;
+        };
+
+        const formatoMoneda = new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP"
+        });
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        modal.innerHTML = `
+        <div class="client-modal reserva-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="titulo-detalle-reserva">
+
+            <div class="client-modal-header">
+                <div>
+                    <h2 id="titulo-detalle-reserva">Detalle de reserva</h2>
+                    <p>Información de la operación de alquiler.</p>
+                </div>
+
+                <button type="button"
+                        class="client-modal-close"
+                        id="cerrar-detalle-reserva"
+                        aria-label="Cerrar">
+                    &times;
+                </button>
+            </div>
+
+            <div class="client-modal-body" id="detalle-reserva-contenido">
+                <p>Cargando información de la reserva...</p>
+            </div>
+
+            <div class="client-modal-footer">
+                <button type="button"
+                        class="btn-primary"
+                        id="aceptar-detalle-reserva">
+                    Cerrar
+                </button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        document.addEventListener("keydown", cerrarConEscape);
+
+        modal.querySelector("#cerrar-detalle-reserva")
+            .addEventListener("click", cerrar);
+
+        modal.querySelector("#aceptar-detalle-reserva")
+            .addEventListener("click", cerrar);
+
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        const contenido = modal.querySelector("#detalle-reserva-contenido");
+
+        try {
+            const [reserva, clientes, vehiculos] = await Promise.all([
+                window.reservasAPI.obtenerPorId(reservaId),
+                window.clientesAPI.obtenerTodos(),
+                window.vehiculosAPI.obtenerTodos()
+            ]);
+
+            if (!modal.isConnected) return;
+
+            const cliente = clientes.find(
+                item => Number(item.id) === Number(reserva.clienteId)
+            );
+
+            const vehiculo = vehiculos.find(
+                item => Number(item.id) === Number(reserva.vehiculoId)
+            );
+
+            const nombreCliente = cliente
+                ? [cliente.nombre, cliente.apellido].filter(Boolean).join(" ")
+                : `Cliente ${reserva.clienteId}`;
+
+            const nombreVehiculo = vehiculo
+                ? [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
+                    .filter(Boolean).join(" ")
+                : `Vehículo ${reserva.vehiculoId}`;
+
+            const codigo = `RES-${String(reserva.id).padStart(6, "0")}`;
+
+            const dias = reserva.inicio && reserva.fin
+                ? Math.round(
+                    (
+                        Date.parse(`${reserva.fin}T12:00:00Z`) -
+                        Date.parse(`${reserva.inicio}T12:00:00Z`)
+                    ) / 86400000
+                ) + 1
+                : null;
+
+            contenido.innerHTML = `
+            <div class="reserva-detalle-cabecera">
+                <strong>${escaparHTML(codigo)}</strong>
+                <span>${escaparHTML(reserva.estado)}</span>
+            </div>
+
+            <div class="reserva-detalle-grid">
+                <div>
+                    <small>Cliente</small>
+                    <strong>${escaparHTML(nombreCliente)}</strong>
+                </div>
+
+                <div>
+                    <small>Documento</small>
+                    <strong>${escaparHTML(cliente?.documento ?? "No disponible")}</strong>
+                </div>
+
+                <div>
+                    <small>Vehículo</small>
+                    <strong>${escaparHTML(nombreVehiculo)}</strong>
+                </div>
+
+                <div>
+                    <small>Placa</small>
+                    <strong>${escaparHTML(vehiculo?.placa ?? "No disponible")}</strong>
+                </div>
+
+                <div>
+                    <small>Fecha de inicio</small>
+                    <strong>${formatoFecha(reserva.inicio)}</strong>
+                </div>
+
+                <div>
+                    <small>Fecha de finalización</small>
+                    <strong>${formatoFecha(reserva.fin)}</strong>
+                </div>
+
+                <div>
+                    <small>Duración del alquiler</small>
+                    <strong>${dias ?? "—"} día(s)</strong>
+                </div>
+            </div>
+
+            <div class="reserva-detalle-total">
+                <span>Total estimado</span>
+                <strong>${formatoMoneda.format(reserva.total)}</strong>
+            </div>
+        `;
+
+        } catch (error) {
+            console.error("Error al consultar reserva:", error);
+
+            if (modal.isConnected) {
+                contenido.innerHTML = `
+                <p class="reserva-detalle-error">
+                    No se pudo consultar la información de esta reserva.
+                </p>
+            `;
+            }
+        }
+    }
+
+    async function abrirModalNuevaReserva() {
+        if (document.getElementById("modal-nueva-reserva")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-nueva-reserva";
+        modal.className = "client-modal-overlay";
+
+        modal.innerHTML = `
+        <div class="client-modal reserva-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="titulo-nueva-reserva">
+
+            <div class="client-modal-header">
+                <div>
+                    <h2 id="titulo-nueva-reserva">Nueva reserva</h2>
+                    <p>Completa los datos del alquiler.</p>
+                </div>
+
+                <button type="button"
+                        class="client-modal-close"
+                        id="cerrar-nueva-reserva">
+                    ×
+                </button>
+            </div>
+
+            <form id="formulario-nueva-reserva">
+                <div class="client-modal-body">
+                    <div class="client-form-grid">
+
+                        <div class="client-form-field">
+                            <label for="reserva-sucursal">Sucursal *</label>
+                            <select id="reserva-sucursal" required>
+                                <option value="">Cargando sucursales...</option>
+                            </select>
+                        </div>
+
+                        <div class="client-form-field">
+                            <label for="reserva-documento">Documento del cliente *</label>
+                            <input id="reserva-documento"
+                                   type="text"
+                                   required>
+                        </div>
+
+                        <div class="client-form-field client-form-full">
+                            <button type="button"
+                                    class="btn-search"
+                                    id="buscar-cliente-reserva">
+                                Buscar cliente
+                            </button>
+                            <p id="reserva-cliente-info"></p>
+                        </div>
+
+                        <div class="client-form-field">
+                            <label for="reserva-licencia">Licencia *</label>
+                            <select id="reserva-licencia" required disabled>
+                                <option value="">Busca un cliente primero</option>
+                            </select>
+                        </div>
+
+                        <div class="client-form-field">
+                            <label for="reserva-vehiculo">Vehículo *</label>
+                            <select id="reserva-vehiculo" required disabled>
+                                <option value="">Selecciona una sucursal</option>
+                            </select>
+                        </div>
+
+                        <div class="client-form-field">
+                            <label for="reserva-inicio">Fecha de inicio *</label>
+                            <input id="reserva-inicio"
+                                   type="date"
+                                   required>
+                        </div>
+
+                        <div class="client-form-field">
+                            <label for="reserva-fin">Fecha de finalización *</label>
+                            <input id="reserva-fin"
+                                   type="date"
+                                   required>
+                        </div>
+
+                    </div>
+
+                    <p id="reserva-mensaje"
+                       class="client-form-message"
+                       role="status"></p>
+                </div>
+
+                <div class="client-modal-footer">
+                    <button type="button"
+                            class="btn-search"
+                            id="cancelar-nueva-reserva">
+                        Cancelar
+                    </button>
+
+                    <button type="submit"
+                            class="btn-primary"
+                            id="guardar-nueva-reserva">
+                        Confirmar reserva
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const sucursalSelect = modal.querySelector("#reserva-sucursal");
+        const vehiculoSelect = modal.querySelector("#reserva-vehiculo");
+        const licenciaSelect = modal.querySelector("#reserva-licencia");
+        const mensaje = modal.querySelector("#reserva-mensaje");
+        const clienteInfo = modal.querySelector("#reserva-cliente-info");
+        const botonGuardar = modal.querySelector("#guardar-nueva-reserva");
+
+        let clienteSeleccionado = null;
+
+        function cerrar() {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        }
+
+        function cerrarConEscape(evento) {
+            if (evento.key === "Escape") cerrar();
+        }
+
+        document.addEventListener("keydown", cerrarConEscape);
+
+        modal.querySelector("#cerrar-nueva-reserva")
+            .addEventListener("click", cerrar);
+
+        modal.querySelector("#cancelar-nueva-reserva")
+            .addEventListener("click", cerrar);
+
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        function llenarSelect(select, elementos, obtenerTexto) {
+            select.replaceChildren();
+
+            const opcionInicial = new Option("Seleccionar...", "");
+            select.add(opcionInicial);
+
+            elementos.forEach(elemento => {
+                select.add(new Option(obtenerTexto(elemento), String(elemento.id)));
+            });
+
+            select.disabled = elementos.length === 0;
+        }
+
+        try {
+            const sucursales = await window.sucursalesAPI.obtenerActivas();
+
+            if (!modal.isConnected) return;
+
+            llenarSelect(
+                sucursalSelect,
+                sucursales,
+                sucursal => sucursal.nombre
+            );
+        } catch (error) {
+            mensaje.textContent = "No se pudieron cargar las sucursales.";
+        }
+
+        sucursalSelect.addEventListener("change", async () => {
+            vehiculoSelect.disabled = true;
+            vehiculoSelect.replaceChildren();
+            vehiculoSelect.add(new Option("Cargando vehículos...", ""));
+
+            if (!sucursalSelect.value) return;
+
+            const sucursalId = sucursalSelect.value;
+
+            try {
+                const vehiculos =
+                    await window.vehiculosAPI.obtenerDisponibles(sucursalId);
+
+                if (!modal.isConnected || sucursalSelect.value !== sucursalId) return;
+
+                llenarSelect(
+                    vehiculoSelect,
+                    vehiculos,
+                    vehiculo => `${vehiculo.marca} ${vehiculo.modelo} ${vehiculo.anio} — ${vehiculo.placa}`
+                );
+            } catch (error) {
+                mensaje.textContent = "No se pudieron cargar los vehículos.";
+            }
+        });
+
+        modal.querySelector("#buscar-cliente-reserva")
+            .addEventListener("click", async () => {
+
+                const documento =
+                    modal.querySelector("#reserva-documento").value.trim();
+
+                clienteSeleccionado = null;
+                clienteInfo.textContent = "";
+                licenciaSelect.disabled = true;
+                licenciaSelect.replaceChildren();
+
+                if (!documento) {
+                    mensaje.textContent = "Introduce el documento del cliente.";
+                    return;
+                }
+
+                mensaje.textContent = "Buscando cliente...";
+
+                try {
+                    const cliente =
+                        await window.clientesAPI.buscarPorDocumento(documento);
+
+                    if (!modal.isConnected) return;
+
+                    const licencias =
+                        await window.clientesAPI.obtenerLicencias(cliente.id);
+
+                    if (!modal.isConnected) return;
+
+                    clienteSeleccionado = cliente;
+
+                    clienteInfo.textContent =
+                        `${cliente.nombre} ${cliente.apellido || ""}`;
+
+                    llenarSelect(
+                        licenciaSelect,
+                        licencias.filter(licencia => licencia.activa),
+                        licencia => `${licencia.numero} - ${licencia.categoria || ""}`
+                    );
+
+                    mensaje.textContent = "";
+                } catch (error) {
+                    mensaje.textContent =
+                        "No se pudo encontrar el cliente o consultar sus licencias.";
+                }
+            });
+
+        modal.querySelector("#formulario-nueva-reserva")
+            .addEventListener("submit", async evento => {
+
+                evento.preventDefault();
+
+                const datos = {
+                    clienteId: clienteSeleccionado?.id,
+                    vehiculoId: Number(vehiculoSelect.value),
+                    licenciaId: Number(licenciaSelect.value),
+                    fechaInicio: modal.querySelector("#reserva-inicio").value,
+                    fechaFin: modal.querySelector("#reserva-fin").value
+                };
+
+                if (!datos.clienteId || !datos.vehiculoId ||
+                    !datos.licenciaId || !datos.fechaInicio || !datos.fechaFin) {
+                    mensaje.textContent = "Completa todos los campos obligatorios.";
+                    return;
+                }
+
+                if (datos.fechaFin < datos.fechaInicio) {
+                    mensaje.textContent =
+                        "La fecha final no puede ser anterior a la inicial.";
+                    return;
+                }
+
+                botonGuardar.disabled = true;
+                mensaje.textContent = "Registrando reserva...";
+
+                try {
+                    const reserva = await window.reservasAPI.crear(datos);
+
+                    cerrar();
+
+                    alert(`Reserva #${reserva.id} registrada correctamente.`);
+                } catch (error) {
+                    mensaje.textContent =
+                        error.message || "No se pudo registrar la reserva.";
+                } finally {
+                    botonGuardar.disabled = false;
+                }
+            });
+    }
+
+    function crearIndicadoresModulo(indicadores) {
+        return `
+        <section class="reservas-stats">
+            ${indicadores.map(indicador => `
+                <div class="reserva-stat-card">
+                    <div class="reserva-stat-icon">
+                        <i data-lucide="${indicador.icono}"></i>
+                    </div>
+                    <div>
+                        <span>${indicador.titulo}</span>
+                        <strong id="${indicador.id}">—</strong>
+                    </div>
+                </div>
+            `).join("")}
+        </section>
+    `;
+    }
+
+    function actualizarIndicadoresModulo(valores) {
+        Object.entries(valores).forEach(([id, valor]) => {
+            const elemento = document.getElementById(id);
+
+            if (elemento) {
+                elemento.textContent = valor;
+            }
+        });
+    }
+
     async function mostrarClientes() {
     contenido.innerHTML = `
         <section class="page-header">
@@ -113,14 +936,23 @@ document.addEventListener("DOMContentLoaded", () => {
             </div>
         </section>
 
+        ${crearIndicadoresModulo([
+            { id: "clientes-total", titulo: "Total de clientes", icono: "users" },
+            { id: "clientes-activos", titulo: "Clientes activos", icono: "user-check" },
+            { id: "clientes-inactivos", titulo: "Inactivos", icono: "user-x" }
+        ])}
+
         <section class="content-panel branches-panel">
             <div class="branches-toolbar">
-                <div class="branches-search">
+                <div class="branches-search rentcar-search">
+                    <i data-lucide="search"></i>
+
                     <input
                         type="search"
                         id="buscar-cliente"
                         placeholder="Buscar por nombre o documento..."
                         aria-label="Buscar cliente"
+                        autocomplete="off"
                     >
 
                     <button
@@ -184,6 +1016,14 @@ document.addEventListener("DOMContentLoaded", () => {
         const clientes = await window.clientesAPI.obtenerTodos();
 
         if (!cuerpoTabla.isConnected) return;
+
+        const activos = clientes.filter(cliente => cliente.activo === true).length;
+
+        actualizarIndicadoresModulo({
+            "clientes-total": clientes.length,
+            "clientes-activos": activos,
+            "clientes-inactivos": clientes.length - activos
+        });
 
         function filtrarClientes() {
             const texto = buscador.value.trim().toLowerCase();
@@ -590,9 +1430,6 @@ document.addEventListener("DOMContentLoaded", () => {
             "No se pudieron consultar las licencias del cliente.";
         cuerpoTabla.replaceChildren();
     }
-
-
-
     }
 
     function abrirModalEditarLicencia(cliente, licencia) {
@@ -983,42 +1820,49 @@ document.addEventListener("DOMContentLoaded", () => {
     contenido.innerHTML = `
         <section class="page-header">
             <div>
-                <h1>Sucursales</h1>
+                <h1>Gestión de sucursales</h1>
                 <p class="page-description">
                     Administración de los puntos de operación.
                 </p>
             </div>
         </section>
 
+        ${crearIndicadoresModulo([
+            { id: "sucursales-total", titulo: "Total de sucursales", icono: "building-2" },
+            { id: "sucursales-activas", titulo: "Sucursales activas", icono: "circle-check" },
+            { id: "sucursales-inactivas", titulo: "Inactivas", icono: "building" }
+        ])}
+
         <section class="content-panel branches-panel">
         <div class="branches-toolbar">
 
-          <div class="branches-search">
+            <div class="branches-search rentcar-search">
+                <i data-lucide="search"></i>
 
-            <input
-              type="search"
-              id="buscar-sucursal"
-              placeholder="Buscar sucursal..."
-              aria-label="Buscar sucursal"
-            >
+                <input
+                    type="search"
+                    id="buscar-sucursal"
+                    placeholder="Buscar sucursal..."
+                    aria-label="Buscar sucursal"
+                    autocomplete="off"
+                >
 
-            <button
-             type="button"
-             id="btn-buscar-sucursal"
-             class="btn-search"
-            >
-            <i data-lucide="search"></i>
-            Buscar
-            </button>
-
-          </div>
+                <button
+                    type="button"
+                    id="btn-buscar-sucursal"
+                    class="btn-search"
+                >
+                    <i data-lucide="search"></i>
+                    Buscar
+                </button>
+            </div>
 
           <button
            type="button"
            id="nueva-sucursal"
            class="btn-primary"
           >
-          <i data-lucide="plus"></i>
+          <i data-lucide="building-2"></i>
           Nueva sucursal
           </button>
         </div>
@@ -1059,8 +1903,15 @@ document.addEventListener("DOMContentLoaded", () => {
     try {
         const sucursales = await window.sucursalesAPI.obtenerTodas();
 
-        // Evita actualizar una pantalla que ya no está abierta.
         if (!cuerpoTabla.isConnected) return;
+
+        const activas = sucursales.filter(sucursal => sucursal.activo === true).length;
+
+        actualizarIndicadoresModulo({
+            "sucursales-total": sucursales.length,
+            "sucursales-activas": activas,
+            "sucursales-inactivas": sucursales.length - activas
+        });
 
         renderizarSucursales(sucursales, cuerpoTabla);
 
@@ -1382,33 +2233,43 @@ document.addEventListener("DOMContentLoaded", () => {
         contenido.innerHTML = `
         <section class="page-header">
             <div>
-                <h1>Gestion de vehiculos</h1>
+                <h1>Gestión de vehiculos</h1>
                 <p class="page-description">
                     Consulta y administración de toda la flota de vehículos.
                 </p>
             </div>
         </section>
 
+        ${crearIndicadoresModulo([
+            { id: "vehiculos-total", titulo: "Total de vehículos", icono: "car-front" },
+            { id: "vehiculos-disponibles", titulo: "Disponibles", icono: "circle-check" },
+            { id: "vehiculos-no-disponibles", titulo: "No disponibles", icono: "clock" }
+        ])}
+
         <section class="content-panel branches-panel">
 
             <div class="branches-toolbar">
 
-                <div class="branches-search">
-                    <input
-                        type="search"
-                        id="buscar-vehiculo"
-                        placeholder="Buscar por placa, marca o modelo..."
-                        aria-label="Buscar vehículo"
-                    >
+            <div class="branches-search rentcar-search">
+                <i data-lucide="search"></i>
 
-                    <button
-                        type="button"
-                        id="btn-buscar-vehiculo"
-                        class="btn-search">
-                        <i data-lucide="search"></i>
-                        Buscar
-                    </button>
-                </div>
+                <input
+                    type="search"
+                    id="buscar-vehiculo"
+                    placeholder="Buscar por placa, marca o modelo..."
+                    aria-label="Buscar vehículo"
+                    autocomplete="off"
+                >
+
+                <button
+                    type="button"
+                    id="btn-buscar-vehiculo"
+                    class="btn-search"
+                >
+                    <i data-lucide="search"></i>
+                    Buscar
+                </button>
+            </div>
 
                 <div class="vehicle-filter">
                         <select id="filtro-sucursal" aria-label="Filtrar por sucursal">
@@ -1420,7 +2281,7 @@ document.addEventListener("DOMContentLoaded", () => {
                     type="button"
                     id="nuevo-vehiculo"
                     class="btn-primary">
-                    <i data-lucide="plus"></i>
+                    <i data-lucide="car-front"></i>
                     Nuevo vehículo
                 </button>
 
@@ -1476,6 +2337,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 window.vehiculosAPI.obtenerTodos(),
                 window.sucursalesAPI.obtenerTodas()
             ]);
+
+            if (!cuerpoTabla.isConnected) return;
+
+            const disponibles = vehiculos.filter(
+                vehiculo => String(vehiculo.estado || "").toUpperCase() === "DISPONIBLE"
+            ).length;
+
+            actualizarIndicadoresModulo({
+                "vehiculos-total": vehiculos.length,
+                "vehiculos-disponibles": disponibles,
+                "vehiculos-no-disponibles": vehiculos.length - disponibles
+            });
 
             sucursales.forEach(sucursal => {
                 const opcion = document.createElement("option");

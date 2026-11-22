@@ -1911,3 +1911,581 @@ button, a {
     background: #edf0f3;
     color: #667085;
 }
+
+.reservas-stats {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 18px;
+    margin-bottom: 24px;
+}
+
+.reserva-stat-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 22px;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+}
+
+.reserva-stat-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+    background: #fff0f2;
+    color: #c9152c;
+    border-radius: 10px;
+}
+
+.reserva-stat-icon svg {
+    width: 23px;
+    height: 23px;
+}
+
+.reserva-stat-card span {
+    display: block;
+    margin-bottom: 6px;
+    color: #737b86;
+    font-size: 13px;
+}
+
+.reserva-stat-card strong {
+    display: block;
+    color: #20252d;
+    font-size: 27px;
+    font-weight: 700;
+}
+
+.reservas-toolbar-title h3 {
+    margin: 0 0 5px;
+    color: #20252d;
+    font-size: 17px;
+}
+
+.reservas-toolbar-title p {
+    margin: 0;
+    color: #737b86;
+    font-size: 13px;
+}
+
+.reservas-empty {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 55px 20px;
+    text-align: center;
+}
+
+.reservas-empty svg {
+    width: 42px;
+    height: 42px;
+    margin-bottom: 15px;
+    color: #9ca3af;
+}
+
+.reservas-empty h3 {
+    margin: 0 0 8px;
+    color: #303741;
+    font-size: 16px;
+}
+
+.reservas-empty p {
+    margin: 0;
+    color: #737b86;
+    font-size: 13px;
+}
+
+@media (max-width: 900px) {
+    .reservas-stats {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* Modal de nueva reserva */
+
+.reserva-modal {
+    max-width: 760px;
+}
+
+.reserva-modal .client-modal-header {
+    padding: 26px 32px;
+}
+
+.reserva-modal .client-modal-body {
+    padding: 28px 32px;
+}
+
+.reserva-modal .client-form-grid {
+    gap: 22px;
+}
+
+.reserva-modal .client-form-field input,
+.reserva-modal .client-form-field select {
+    width: 100%;
+    min-height: 44px;
+    box-sizing: border-box;
+    padding: 10px 12px;
+    border: 1px solid #d5dbe3;
+    border-radius: 7px;
+    background: #fff;
+    color: #20252d;
+    font: inherit;
+}
+
+.reserva-modal .client-form-field input:focus,
+.reserva-modal .client-form-field select:focus {
+    outline: none;
+    border-color: #c9152c;
+    box-shadow: 0 0 0 3px rgba(201, 21, 44, 0.10);
+}
+
+.reserva-modal .client-form-field select:disabled {
+    background: #f3f4f6;
+    color: #9ca3af;
+    cursor: not-allowed;
+}
+
+.reserva-modal #buscar-cliente-reserva {
+    width: 100%;
+}
+
+.reserva-modal #reserva-cliente-info:not(:empty) {
+    padding: 13px 15px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-left: 3px solid #c9152c;
+    border-radius: 6px;
+    color: #20252d;
+    font-weight: 600;
+}
+
+.reserva-modal .client-modal-footer {
+    padding: 20px 32px;
+}
+
+@media (max-width: 600px) {
+    .reserva-modal .client-modal-header,
+    .reserva-modal .client-modal-body,
+    .reserva-modal .client-modal-footer {
+        padding: 20px;
+    }
+}
+
+.reserva-codigo {
+    display: inline-block;
+    padding: 6px 10px;
+    border-radius: 6px;
+    background: #f3f4f6;
+    color: #374151;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: 0.3px;
+    white-space: nowrap;
+}
+
+.reserva-vehiculo-info {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.reserva-vehiculo-info strong {
+    font-size: 13px;
+    font-weight: 600;
+    color: #252a32;
+}
+
+.reserva-vehiculo-info small {
+    font-size: 11px;
+    color: #77808f;
+}
+
+.reservas-section-heading {
+    margin: 24px 0 14px;
+}
+
+.reservas-section-heading h3 {
+    margin: 0 0 5px;
+    font-size: 18px;
+    font-weight: 700;
+    color: #242932;
+}
+
+.reservas-section-heading p {
+    margin: 0;
+    font-size: 13px;
+    color: #77808f;
+}
+
+/* Buscador dentro de la barra superior */
+
+.reservas-list-panel {
+    padding-top: 20px;
+}
+
+.reservas-list-toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.reservas-list-toolbar .reservas-search-input {
+    flex: 1;
+    width: auto;
+    max-width: 560px;
+}
+
+.reservas-list-toolbar .btn-primary {
+    flex-shrink: 0;
+}
+
+@media (max-width: 650px) {
+    .reservas-list-toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .reservas-list-toolbar .reservas-search-input {
+        max-width: none;
+        width: 100%;
+    }
+}
+
+.reservas-list-toolbar .reservas-search-input {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+
+    flex: 1;
+    width: 100%;
+    max-width: 560px;
+    min-width: 0;
+    height: 46px;
+
+    padding: 0 15px;
+    background: #ffffff;
+    border: 1px solid #d7dce4;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.reservas-list-toolbar .reservas-search-input:focus-within {
+    border-color: #ce2030;
+    box-shadow: 0 0 0 3px rgba(206, 32, 48, 0.08);
+}
+
+.reservas-list-toolbar .reservas-search-input svg {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    color: #7b8492;
+}
+
+.reservas-list-toolbar .reservas-search-input input {
+    display: block;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+
+    margin: 0;
+    padding: 0;
+
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+
+    color: #252a32;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.reservas-list-toolbar .reservas-search-input input:focus {
+    border: 0;
+    outline: none;
+    box-shadow: none;
+}
+
+.reservas-list-toolbar .reservas-search-input input::placeholder {
+    color: #929aa7;
+    opacity: 1;
+}
+
+.reservas-list-toolbar .btn-primary {
+    flex-shrink: 0;
+}
+
+@media (max-width: 650px) {
+    .reservas-list-toolbar .reservas-search-input {
+        max-width: none;
+    }
+}
+
+.btn-ver-reserva {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 8px 11px;
+    border: 1px solid #d7dce4;
+    border-radius: 7px;
+    background: #fff;
+    color: #ce2030;
+    font: inherit;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    white-space: nowrap;
+}
+
+.btn-ver-reserva:hover {
+    background: #fff2f3;
+    border-color: #ce2030;
+}
+
+.btn-ver-reserva svg {
+    width: 15px;
+    height: 15px;
+}
+
+.reserva-detalle-cabecera {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+}
+
+.reserva-detalle-cabecera > strong {
+    font-size: 16px;
+}
+
+.reserva-detalle-cabecera > span {
+    padding: 7px 11px;
+    border-radius: 7px;
+    background: #ecfdf3;
+    color: #067647;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.reserva-detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 22px;
+}
+
+.reserva-detalle-grid > div {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-width: 0;
+}
+
+.reserva-detalle-grid small {
+    color: #77808f;
+    font-size: 12px;
+}
+
+.reserva-detalle-grid strong {
+    color: #252a32;
+    font-size: 14px;
+    overflow-wrap: anywhere;
+}
+
+.reserva-detalle-total {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 15px;
+    margin-top: 26px;
+    padding-top: 20px;
+    border-top: 1px solid #e5e7eb;
+}
+
+.reserva-detalle-total strong {
+    color: #ce2030;
+    font-size: 20px;
+}
+
+.reserva-detalle-error {
+    color: #ce2030;
+}
+
+@media (max-width: 600px) {
+    .reserva-detalle-grid {
+        grid-template-columns: 1fr;
+    }
+}
+
+.rentcar-search {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    width: 100%;
+    max-width: 560px;
+    min-width: 0;
+    height: 46px;
+    padding: 0 15px;
+    background: #ffffff;
+    border: 1px solid #d7dce4;
+    border-radius: 8px;
+    box-sizing: border-box;
+    transition: border-color .2s, box-shadow .2s;
+}
+
+.rentcar-search:focus-within {
+    border-color: #ce2030;
+    box-shadow: 0 0 0 3px rgba(206, 32, 48, .08);
+}
+
+.rentcar-search > svg,
+.rentcar-search > i {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    color: #7b8492;
+}
+
+.rentcar-search > input {
+    display: block;
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    color: #252a32;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.rentcar-search > input:focus {
+    border: 0;
+    outline: none;
+    box-shadow: none;
+}
+
+.rentcar-search > input::placeholder {
+    color: #929aa7;
+    opacity: 1;
+}
+
+@media (max-width: 650px) {
+    .rentcar-search {
+        max-width: none;
+    }
+}
+
+.branches-toolbar .branches-search.rentcar-search {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex: 1;
+    width: 100%;
+    max-width: 560px;
+    min-width: 0;
+    height: 46px;
+    padding: 0 15px;
+    background: #fff;
+    border: 1px solid #d7dce4;
+    border-radius: 8px;
+    box-sizing: border-box;
+}
+
+.branches-toolbar .branches-search.rentcar-search:focus-within {
+    border-color: #ce2030;
+    box-shadow: 0 0 0 3px rgba(206, 32, 48, .08);
+}
+
+.branches-toolbar .branches-search.rentcar-search > svg {
+    width: 19px;
+    height: 19px;
+    flex-shrink: 0;
+    color: #7b8492;
+}
+
+.branches-toolbar .branches-search.rentcar-search > input {
+    flex: 1;
+    width: 100%;
+    min-width: 0;
+    height: 100%;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    outline: none;
+    box-shadow: none;
+    background: transparent;
+    font-family: inherit;
+    font-size: 13px;
+}
+
+.branches-toolbar .branches-search.rentcar-search > .btn-search {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+@media (max-width: 650px) {
+    .branches-toolbar .branches-search.rentcar-search {
+        max-width: none;
+    }
+}
+
+.branches-toolbar .branches-search.rentcar-search > svg,
+.branches-toolbar .branches-search.rentcar-search > i[data-lucide="search"] {
+    display: block !important;
+    width: 19px !important;
+    height: 19px !important;
+    min-width: 19px;
+    flex-shrink: 0;
+    color: #7b8492;
+    stroke: currentColor;
+    opacity: 1;
+    visibility: visible;
+}
+
+.branches-toolbar .branches-search.rentcar-search {
+    position: relative;
+}
+
+.branches-toolbar .branches-search.rentcar-search > svg.lucide-search {
+    position: static !important;
+    display: block !important;
+
+    width: 19px !important;
+    height: 19px !important;
+    min-width: 19px;
+
+    left: auto !important;
+    top: auto !important;
+    transform: none !important;
+
+    flex: 0 0 19px;
+    color: #7b8492;
+    stroke: currentColor;
+
+    opacity: 1;
+    visibility: visible;
+}

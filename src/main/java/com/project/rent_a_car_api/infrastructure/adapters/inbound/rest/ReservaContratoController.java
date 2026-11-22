@@ -19,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
+import java.util.List;
 
 /**
  * Controller de reservas y contratos (RF-03, RF-04).
@@ -70,6 +71,42 @@ public class ReservaContratoController {
             throw new DomainException(r.getError());
         }
         return Responses.ContratoResponse.desde(r.getValue());
+    }
+
+    @Operation(
+    summary = "Listar reservas",
+    description = "Obtiene todas las reservas registradas"
+)
+@GetMapping("/reservas")
+public List<Responses.ReservaResponse> listarReservas() {
+
+    var r = reservas.listarTodas();
+
+    if (r.isFailure()) {
+        throw new DomainException(r.getError());
+    }
+
+    return r.getValue()
+            .stream()
+            .map(Responses.ReservaResponse::desde)
+            .toList();
+}
+
+    @Operation(
+        summary = "Consultar reserva",
+        description = "Obtiene una reserva por su identificador"
+    )
+    @GetMapping("/reservas/{id}")
+    public Responses.ReservaResponse buscarReserva(
+            @PathVariable Long id) {
+
+        var r = reservas.buscarPorId(id);
+
+        if (r.isFailure()) {
+            throw new DomainException(r.getError());
+        }
+
+        return Responses.ReservaResponse.desde(r.getValue());
     }
 
     @Operation(summary = "Buscar contrato", description = "Detalle de un contrato por id")

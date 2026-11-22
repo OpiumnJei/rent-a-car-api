@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.List;
 
 /**
  * Caso de uso de reservas (RF-03.1, RF-03.2).
@@ -83,5 +84,21 @@ public class ReservaService implements ReservaUseCase {
             return creada;
         }
         return Result.ok(reservas.guardar(creada.getValue()));
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Result<List<Reserva>> listarTodas() {
+        return Result.ok(reservas.listarTodas());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Result<Reserva> buscarPorId(Long id) {
+        return reservas.buscarPorId(id)
+                .map(Result::ok)
+                .orElseGet(() -> Result.fail(
+                        DomainError.notFound("Reserva no encontrada: " + id)
+                ));
     }
 }

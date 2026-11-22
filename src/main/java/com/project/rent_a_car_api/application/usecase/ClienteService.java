@@ -73,4 +73,85 @@ public class ClienteService implements ClienteUseCase {
         }
         return Result.ok(c.get());
     }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Result<Cliente> buscarPorDocumento(String documento) {
+        if (documento == null || documento.isBlank()) {
+            return Result.fail(
+                DomainError.notFound("Documento no encontrado")
+        );
+    }
+
+    var cliente = clientes.buscarPorDocumento(documento.trim());
+
+    if (cliente.isEmpty()) {
+        return Result.fail(
+            DomainError.notFound("Cliente no encontrado: " + documento)
+        );
+    }
+
+    return Result.ok(cliente.get());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Result<List<Cliente>> listarTodos() {
+        return Result.ok(clientes.listarTodos());
+    }
+
+    @Override
+    @Transactional
+    public Result<Licencia> actualizarLicencia(
+        Long id,
+        String numero,
+        LocalDate fechaExpiracion,
+        String categoria) {
+
+    if (id == null) {
+        return Result.fail(
+                DomainError.validation("El ID de licencia es obligatorio")
+        );
+    }
+
+    var existente = licencias.buscarPorId(id);
+
+    if (existente.isEmpty()) {
+        return Result.fail(
+                DomainError.notFound("Licencia no encontrada: " + id)
+        );
+    }
+
+    Licencia actual = existente.get();
+
+    Result<Licencia> validacion = Licencia.crear(
+            actual.id(),
+            actual.clienteId(),
+            numero,
+            fechaExpiracion,
+            categoria,
+            actual.activa()
+    );
+
+    if (validacion.isFailure()) {
+        return validacion;
+    }
+
+    Licencia actualizada = validacion.getValue();
+
+    var duplicada = licencias.buscarPorNumero(actualizada.numero());
+
+    if (duplicada.isPresent()
+            && !duplicada.get().id().equals(id)) {
+
+        return Result.fail(
+                DomainError.conflict(
+                        "Número de licencia ya registrado: "
+                                + actualizada.numero()
+                )
+        );
+    }
+
+    return Result.ok(licencias.guardar(actualizada));
+    }
 }

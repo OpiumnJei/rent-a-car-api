@@ -4,6 +4,7 @@ import com.project.rent_a_car_api.domain.model.Reserva;
 import com.project.rent_a_car_api.domain.result.Result;
 
 import java.time.LocalDate;
+import java.util.List;
 
 /**
  * Caso de uso de reservas (RF-03).
@@ -12,4 +13,6 @@ import java.time.LocalDate;
  */
 public interface ReservaUseCase {
     Result<Reserva> crear(Long clienteId, Long vehiculoId, Long licenciaId, LocalDate inicio, LocalDate fin);
+    Result<List<Reserva>> listarTodas();
+    Result<Reserva> buscarPorId(Long id);
 }

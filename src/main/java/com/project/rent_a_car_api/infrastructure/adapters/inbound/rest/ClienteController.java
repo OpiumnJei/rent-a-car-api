@@ -18,7 +18,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.bind.annotation.PutMapping;
 
 import java.util.List;
 
@@ -36,47 +35,6 @@ public class ClienteController {
 
     public ClienteController(ClienteUseCase clientes) {
         this.clientes = clientes;
-    }
-
-    @Operation(summary = "Listar todos los clientes")
-    @GetMapping("/clientes")
-    public List<Responses.ClienteResponse> listarTodos() {
-        var resultado = clientes.listarTodos();
-
-        if (resultado.isFailure()) {
-            throw new DomainException(resultado.getError());
-        }
-
-        return resultado.getValue()
-                .stream()
-                .map(Responses.ClienteResponse::desde)
-                .toList();
-    }
-
-    @Operation(summary = "Buscar cliente por ID")
-    @GetMapping("/clientes/{id}")
-    public Responses.ClienteResponse buscarPorId(@PathVariable Long id) {
-        var resultado = clientes.buscarPorId(id);
-
-        if (resultado.isFailure()) {
-            throw new DomainException(resultado.getError());
-        }
-
-        return Responses.ClienteResponse.desde(resultado.getValue());
-    }
-
-    @Operation(summary = "Buscar cliente por documento")
-    @GetMapping("/clientes/documento/{documento}")
-    public Responses.ClienteResponse buscarPorDocumento(
-            @PathVariable String documento) {
-
-        var resultado = clientes.buscarPorDocumento(documento);
-
-        if (resultado.isFailure()) {
-            throw new DomainException(resultado.getError());
-        }
-
-        return Responses.ClienteResponse.desde(resultado.getValue());
     }
 
     @Operation(summary = "Registrar cliente", description = "Alta por documento unico cedula/pasaporte (RF-02.1)")
@@ -126,29 +84,4 @@ public class ClienteController {
         }
         return r.getValue().stream().map(Responses.LicenciaResponse::desde).toList();
     }
-
-    @PutMapping("/licencias/{id}")
-    public Responses.LicenciaResponse actualizarLicencia(
-        @PathVariable Long id,
-        @Valid @RequestBody ActualizarLicenciaRequest req) {
-
-    var resultado = clientes.actualizarLicencia(
-            id,
-            req.numero(),
-            req.fechaExpiracion(),
-            req.categoria()
-    );
-
-    if (resultado.isFailure()) {
-        throw new DomainException(resultado.getError());
-    }
-
-    return Responses.LicenciaResponse.desde(resultado.getValue());
-    }
-
-    public record ActualizarLicenciaRequest(
-        @jakarta.validation.constraints.NotBlank String numero,
-        @jakarta.validation.constraints.NotNull java.time.LocalDate fechaExpiracion,
-        String categoria
-    ) {}
 }

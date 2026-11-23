@@ -180,3 +180,15 @@ const reservasAPI = {
 };
 
 window.reservasAPI = reservasAPI;
+
+const facturasAPI = {
+    obtenerTodas: async () => {
+        return apiRequest("/facturas");
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/facturas/${encodeURIComponent(id)}`);
+    }
+};
+
+window.facturasAPI = facturasAPI;

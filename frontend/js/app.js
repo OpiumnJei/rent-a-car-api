@@ -55,6 +55,8 @@ document.addEventListener("DOMContentLoaded", () => {
              window.lucide.createIcons();
            }
 
+           cargarDashboard();
+
            return;
         }        
         if (nombre === "sucursales") {
@@ -106,6 +108,126 @@ document.addEventListener("DOMContentLoaded", () => {
         contenido.append(encabezado, panel);
     }
 
+    async function cargarDashboard() {
+        const estadoConexion = document.getElementById("api-status");
+
+        try {
+            const [sucursales, vehiculos, reservas, facturas] = await Promise.all([
+                window.sucursalesAPI.obtenerTodas(),
+                window.vehiculosAPI.obtenerTodos(),
+                window.reservasAPI.obtenerTodas(),
+                window.facturasAPI.obtenerTodas()
+            ]);
+
+            const disponibles = vehiculos.filter(
+                vehiculo => String(vehiculo.estado || "").toUpperCase() === "DISPONIBLE"
+            ).length;
+
+            const fijar = (id, valor) => {
+                const elemento = document.getElementById(id);
+                if (elemento) elemento.textContent = valor;
+            };
+
+            fijar("total-disponibles", disponibles);
+            fijar("total-vehiculos", vehiculos.length);
+            fijar("total-reservas", reservas.length);
+            fijar("total-sucursales", sucursales.length);
+            fijar("total-facturas", facturas.length);
+
+            if (estadoConexion) {
+                estadoConexion.textContent = "Datos conectados";
+                estadoConexion.classList.add("is-connected");
+            }
+
+            const notaFlota = document.getElementById("dashboard-fleet-note");
+
+            if (notaFlota) {
+                notaFlota.textContent = vehiculos.length
+                    ? `${disponibles} de ${vehiculos.length} disponibles`
+                    : "Sin vehículos registrados";
+            }
+
+            renderizarFlotaDashboard(vehiculos, sucursales);
+            renderizarReservasDashboard(reservas);
+
+        } catch (error) {
+            console.error("Error al cargar el dashboard:", error);
+
+            if (estadoConexion) {
+                estadoConexion.textContent = "Sin conexión con la API";
+                estadoConexion.classList.remove("is-connected");
+            }
+        }
+    }
+
+    function renderizarFlotaDashboard(vehiculos, sucursales) {
+        const cuerpo = document.getElementById("fleet-table-body");
+        if (!cuerpo) return;
+
+        const nombresSucursales = new Map(
+            sucursales.map(sucursal => [sucursal.id, sucursal.nombre])
+        );
+
+        cuerpo.replaceChildren();
+
+        if (!vehiculos.length) {
+            const fila = cuerpo.insertRow();
+            const celda = fila.insertCell();
+            celda.colSpan = 4;
+            celda.className = "empty-table";
+            celda.textContent = "No hay vehículos registrados.";
+            return;
+        }
+
+        vehiculos.slice(0, 6).forEach(vehiculo => {
+            const fila = cuerpo.insertRow();
+
+            const celdaVehiculo = fila.insertCell();
+            celdaVehiculo.textContent = [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
+                .filter(Boolean)
+                .join(" ") || "—";
+
+            const celdaPlaca = fila.insertCell();
+            celdaPlaca.textContent = vehiculo.placa || "—";
+
+            const celdaSucursal = fila.insertCell();
+            celdaSucursal.textContent = nombresSucursales.get(vehiculo.sucursalId)
+                ?? `Sucursal #${vehiculo.sucursalId}`;
+
+            const celdaEstado = fila.insertCell();
+            celdaEstado.appendChild(crearBadgeEstadoVehiculo(vehiculo.estado));
+        });
+    }
+
+    function renderizarReservasDashboard(reservas) {
+        const contenedor = document.getElementById("dashboard-reservas");
+        if (!contenedor) return;
+
+        if (!reservas.length) {
+            contenedor.innerHTML = `
+                <div class="empty-state">
+                    <div class="empty-state-icon" aria-hidden="true">▤</div>
+                    <h3>Sin reservas registradas</h3>
+                    <p>Registra una nueva reserva para comenzar.</p>
+                    <a href="#reservas" class="btn btn-outline">Ir a reservas</a>
+                </div>
+            `;
+            return;
+        }
+
+        const confirmadas = reservas.filter(reserva => reserva.estado === "CONFIRMADA").length;
+        const convertidas = reservas.filter(reserva => reserva.estado === "CONVERTIDA").length;
+
+        contenedor.innerHTML = `
+            <div class="empty-state">
+                <div class="empty-state-icon" aria-hidden="true">▤</div>
+                <h3>${reservas.length} reservas registradas</h3>
+                <p>${confirmadas} confirmadas · ${convertidas} convertidas.</p>
+                <a href="#reservas" class="btn btn-outline">Ver reservas</a>
+            </div>
+        `;
+    }
+
     async function mostrarReservas() {
         contenido.innerHTML = `
         <section class="page-header">
@@ -141,11 +263,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
             <div class="reserva-stat-card">
                 <div class="reserva-stat-icon">
-                    <i data-lucide="clock"></i>
+                    <i data-lucide="repeat"></i>
                 </div>
                 <div>
-                    <span>Pendientes</span>
-                    <strong id="reservas-pendientes">—</strong>
+                    <span>Convertidas</span>
+                    <strong id="reservas-convertidas">—</strong>
                 </div>
             </div>
         </section>
@@ -195,7 +317,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     <tbody id="reservas-table-body">
                         <tr>
-                            <td colspan="7">
+                            <td colspan="8">
                                 <div class="reservas-empty">
                                     <i data-lucide="calendar-search"></i>
                                     <h3>Listado pendiente de conexión</h3>
@@ -288,18 +410,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 reserva => reserva.estado === "CONFIRMADA"
             ).length;
 
-            const pendientes = reservas.filter(
-                reserva => reserva.estado === "PENDIENTE"
+            const convertidas = reservas.filter(
+                reserva => reserva.estado === "CONVERTIDA"
             ).length;
 
             document.getElementById("reservas-total").textContent = total;
             document.getElementById("reservas-confirmadas").textContent = confirmadas;
-            document.getElementById("reservas-pendientes").textContent = pendientes;
+            document.getElementById("reservas-convertidas").textContent = convertidas;
 
             if (total === 0) {
                 tbody.innerHTML = `
                 <tr>
-                    <td colspan="7">
+                    <td colspan="8">
                         <div class="reservas-empty">
                             <h3>No hay reservas registradas</h3>
                             <p>Registra una nueva reserva para comenzar.</p>
@@ -888,6 +1010,10 @@ document.addEventListener("DOMContentLoaded", () => {
                     cerrar();
 
                     alert(`Reserva #${reserva.id} registrada correctamente.`);
+
+                    if (location.hash === "#reservas") {
+                        await mostrarReservas();
+                    }
                 } catch (error) {
                     mensaje.textContent =
                         error.message || "No se pudo registrar la reserva.";
@@ -1348,7 +1474,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!licencias.length) {
             const fila = document.createElement("tr");
             const celda = document.createElement("td");
-            celda.colSpan = 4;
+            celda.colSpan = 5;
             celda.textContent =
                 "Este cliente todavía no tiene licencias registradas.";
             fila.appendChild(celda);
@@ -1469,6 +1595,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             </label>
                             <input id="editar-licencia-numero"
                                    type="text"
+                                   maxlength="30"
                                    required>
                         </div>
 
@@ -1477,7 +1604,8 @@ document.addEventListener("DOMContentLoaded", () => {
                                 Categoría
                             </label>
                             <input id="editar-licencia-categoria"
-                                   type="text">
+                                   type="text"
+                                   maxlength="10">
                         </div>
 
                         <div class="client-form-field client-form-full">
@@ -1627,6 +1755,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <input id="licencia-numero"
                                    name="numero"
                                    type="text"
+                                   maxlength="30"
                                    required>
                         </div>
 
@@ -1637,6 +1766,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <input id="licencia-categoria"
                                    name="categoria"
                                    type="text"
+                                   maxlength="10"
                             >
                         </div>
 
@@ -2233,7 +2363,7 @@ document.addEventListener("DOMContentLoaded", () => {
         contenido.innerHTML = `
         <section class="page-header">
             <div>
-                <h1>Gestión de vehiculos</h1>
+                <h1>Gestión de vehículos</h1>
                 <p class="page-description">
                     Consulta y administración de toda la flota de vehículos.
                 </p>
@@ -2301,7 +2431,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <th>Sucursal</th>
                             <th>Kilometraje</th>
                             <th>Estado</th>
-                            <th>Estado</th>
+                            <th>Acciones</th>
                         </tr>
                     </thead>
 
@@ -2441,11 +2571,38 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const fila = cuerpoTabla.insertRow();
                 const celda = fila.insertCell();
-                celda.colSpan = 8;
+                celda.colSpan = 9;
                 celda.textContent =
                     "No se pudieron cargar los vehículos. Verifica la conexión con el servidor.";
             }
         }
+    }
+
+    function claseEstadoVehiculo(estado) {
+        switch (String(estado ?? "").toUpperCase()) {
+            case "DISPONIBLE": return "active";
+            case "ALQUILADO": return "info";
+            case "EN_MANTENIMIENTO": return "warning";
+            case "AVERIADO": return "danger";
+            default: return "inactive";
+        }
+    }
+
+    function etiquetaEstadoVehiculo(estado) {
+        switch (String(estado ?? "").toUpperCase()) {
+            case "DISPONIBLE": return "Disponible";
+            case "ALQUILADO": return "Alquilado";
+            case "EN_MANTENIMIENTO": return "En mantenimiento";
+            case "AVERIADO": return "Averiado";
+            default: return (estado ?? "DESCONOCIDO").replaceAll("_", " ");
+        }
+    }
+
+    function crearBadgeEstadoVehiculo(estado) {
+        const span = document.createElement("span");
+        span.className = "branch-status " + claseEstadoVehiculo(estado);
+        span.textContent = etiquetaEstadoVehiculo(estado);
+        return span;
     }
 
     function renderizarVehiculos(vehiculos, cuerpoTabla, nombresSucursales) {
@@ -2482,14 +2639,7 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const celdaEstado = fila.insertCell();
-            const estado = document.createElement("span");
-
-            estado.className = "branch-status active";
-            estado.textContent =
-                (vehiculo.estado ?? "DESCONOCIDO")
-                    .replaceAll("_", " ");
-
-            celdaEstado.appendChild(estado);
+            celdaEstado.appendChild(crearBadgeEstadoVehiculo(vehiculo.estado));
 
             const celdaAcciones = fila.insertCell();
             const botonEstado = document.createElement("button");

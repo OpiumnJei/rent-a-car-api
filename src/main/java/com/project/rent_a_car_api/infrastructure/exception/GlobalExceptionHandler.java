@@ -11,6 +11,7 @@ import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
+import org.springframework.web.HttpRequestMethodNotSupportedException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -53,6 +54,20 @@ public class GlobalExceptionHandler {
     public ProblemDetail handleNoResource(NoResourceFoundException ex, HttpServletRequest request) {
         return problem(HttpStatus.NOT_FOUND, "Recurso no encontrado",
                 "No existe el endpoint " + request.getRequestURI(), request);
+    }
+
+    @ExceptionHandler(HttpRequestMethodNotSupportedException.class)
+    public ProblemDetail handleMethodNotSupported(HttpRequestMethodNotSupportedException ex, HttpServletRequest request) {
+        ProblemDetail detail = problem(HttpStatus.METHOD_NOT_ALLOWED, "Metodo no permitido",
+                "El metodo " + ex.getMethod() + " no esta permitido para " + request.getRequestURI(), request);
+
+        if (ex.getSupportedHttpMethods() != null) {
+            detail.setProperty("allowed", ex.getSupportedHttpMethods().stream()
+                    .map(method -> method.name())
+                    .collect(Collectors.toList()));
+        }
+
+        return detail;
     }
 
     @ExceptionHandler({BadCredentialsException.class, DisabledException.class})

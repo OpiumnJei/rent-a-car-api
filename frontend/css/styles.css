@@ -1075,6 +1075,27 @@ button, a {
     color: #69717D;
 }
 
+.branch-status.warning {
+    background: #FCF3DC;
+    color: #946800;
+}
+
+.branch-status.danger {
+    background: #FBE4E4;
+    color: #B3261E;
+}
+
+.branch-status.info {
+    background: #E3EEFB;
+    color: #1C5FAB;
+}
+
+.data-status.is-connected {
+    background: #E5F4EC;
+    color: #237A57;
+    border-color: #BFE3CF;
+}
+
 .branches-message {
     text-align: center;
     color: #69717D !important;

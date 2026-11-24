@@ -182,6 +182,7 @@ const reservasAPI = {
 window.reservasAPI = reservasAPI;
 
 const contratosAPI = {
+
     crear: async (contrato) => {
         return apiRequest("/contratos", {
             method: "POST",
@@ -192,9 +193,11 @@ const contratosAPI = {
     obtenerPorId: async (id) => {
         return apiRequest(`/contratos/${encodeURIComponent(id)}`);
     }
+
 };
 
 window.contratosAPI = contratosAPI;
+
 
 const empleadosAPI = {
 
@@ -216,3 +219,18 @@ const empleadosAPI = {
 };
 
 window.empleadosAPI = empleadosAPI;
+
+
+const facturasAPI = {
+
+    obtenerTodas: async () => {
+        return apiRequest("/facturas");
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/facturas/${encodeURIComponent(id)}`);
+    }
+
+};
+
+window.facturasAPI = facturasAPI;

@@ -5,6 +5,7 @@ import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Positive;
 import jakarta.validation.constraints.PositiveOrZero;
+import jakarta.validation.constraints.Size;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
@@ -68,9 +69,9 @@ public final class Requests {
     @Schema(description = "Registro de licencia de conducir (RF-02.2)")
     public record LicenciaRequest(
             @Schema(description = "Id del cliente dueno", example = "1") @NotNull Long clienteId,
-            @Schema(description = "Numero de licencia", example = "LIC-001") @NotBlank String numero,
+            @Schema(description = "Numero de licencia", example = "LIC-001") @NotBlank @Size(max = 30) String numero,
             @Schema(description = "Fecha de expiracion (debe cubrir todo el alquiler)", example = "2028-05-01") @NotNull LocalDate fechaExpiracion,
-            @Schema(description = "Categoria", example = "B") String categoria) {
+            @Schema(description = "Categoria", example = "B") @Size(max = 10) String categoria) {
     }
 
     @Schema(description = "Creacion de reserva con validaciones (RF-03.2)")

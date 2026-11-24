@@ -147,8 +147,8 @@ public class ClienteController {
     }
 
     public record ActualizarLicenciaRequest(
-        @jakarta.validation.constraints.NotBlank String numero,
+        @jakarta.validation.constraints.NotBlank @jakarta.validation.constraints.Size(max = 30) String numero,
         @jakarta.validation.constraints.NotNull java.time.LocalDate fechaExpiracion,
-        String categoria
+        @jakarta.validation.constraints.Size(max = 10) String categoria
     ) {}
 }

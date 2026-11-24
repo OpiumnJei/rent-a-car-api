@@ -73,6 +73,10 @@ document.addEventListener("DOMContentLoaded", () => {
             mostrarReservas();
             return;
         }
+        if (nombre === "contratos") {
+            mostrarContratos();
+            return;
+        }
 
         const modulo = modulos[nombre];
 
@@ -104,6 +108,785 @@ document.addEventListener("DOMContentLoaded", () => {
 
         panel.appendChild(mensaje);
         contenido.append(encabezado, panel);
+    }
+
+    async function mostrarContratos() {
+    contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Gestión de contratos</h1>
+                <p class="page-description">
+                    Administración y seguimiento de contratos
+                    de alquiler de vehículos.
+                </p>
+            </div>
+        </section>
+
+        <section class="reservas-stats">
+            <div class="reserva-stat-card">
+                <div class="reserva-stat-icon">
+                    <i data-lucide="file-text"></i>
+                </div>
+                <div>
+                    <span>Contratos consultados</span>
+                    <strong id="contratos-total">0</strong>
+                </div>
+            </div>
+
+            <div class="reserva-stat-card">
+                <div class="reserva-stat-icon">
+                    <i data-lucide="check-circle"></i>
+                </div>
+                <div>
+                    <span>Activos consultados</span>
+                    <strong id="contratos-activos">0</strong>
+                </div>
+            </div>
+
+            <div class="reserva-stat-card">
+                <div class="reserva-stat-icon">
+                    <i data-lucide="file-check"></i>
+                </div>
+                <div>
+                    <span>Finalizados consultados</span>
+                    <strong id="contratos-finalizados">0</strong>
+                </div>
+            </div>
+        </section>
+
+        <div class="reservas-section-heading">
+            <h3>Consulta de contratos</h3>
+            <p>
+                Busca contratos por su identificador
+                o genera uno desde una reserva confirmada.
+            </p>
+        </div>
+
+        <section class="content-panel branches-panel reservas-list-panel">
+            <div class="branches-toolbar reservas-list-toolbar">
+                <div class="reservas-search-input">
+                    <i data-lucide="search"></i>
+                    <input
+                        type="number"
+                        id="buscar-contrato"
+                        min="1"
+                        step="1"
+                        placeholder="Número de contrato..."
+                        aria-label="Buscar contrato por ID"
+                    >
+                </div>
+
+                <button
+                    type="button"
+                    class="btn-primary"
+                    id="btn-nuevo-contrato"
+                >
+                    <i data-lucide="file-plus"></i>
+                    Nuevo contrato
+                </button>
+            </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Reserva</th>
+                            <th>Empleado</th>
+                            <th>Garantía</th>
+                            <th>Total estimado</th>
+                            <th>Estado</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+
+                    <tbody id="contratos-table-body">
+                        <tr>
+                            <td colspan="8">
+                                <div class="reservas-empty">
+                                    <i data-lucide="file-search"></i>
+                                    <h3>Consulta tus contratos</h3>
+                                    <p>
+                                        Introduce el número de un contrato
+                                        para consultar su información.
+                                    </p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+
+    renderizarContratosConsultados();
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+
+    document
+        .getElementById("btn-nuevo-contrato")
+        .addEventListener("click", abrirModalNuevoContrato);
+
+    document
+        .getElementById("buscar-contrato")
+        .addEventListener("change", async (evento) => {
+            const id = evento.target.value.trim();
+
+            if (!id) return;
+
+            await buscarContratoPorId(id);
+        });
+    }
+
+    const contratosConsultados = new Map();
+
+    async function buscarContratoPorId(id) {
+        const tbody = document.getElementById("contratos-table-body");
+
+        if (!tbody) return;
+
+        const identificador = Number(id);
+
+        if (!Number.isSafeInteger(identificador) || identificador < 1) {
+            alert("Introduce un número de contrato válido.");
+            return;
+        }
+
+        try {
+            const contrato = await window.contratosAPI.obtenerPorId(identificador);
+
+            contratosConsultados.set(Number(contrato.id), contrato);
+
+            renderizarContratosConsultados();
+
+        } catch (error) {
+            alert(`No se pudo consultar el contrato: ${error.message}`);
+        }
+    }
+
+    async function renderizarContratosConsultados() {
+
+        const tbody = document.getElementById("contratos-table-body");
+
+        if (!tbody) return;
+
+        const contratos = [...contratosConsultados.values()];
+
+        const formatoMoneda = new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP"
+        });
+
+        const escaparHTML = valor => String(valor ?? "").replace(
+            /[&<>"']/g,
+            caracter => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#39;"
+            })[caracter]
+        );
+
+        document.getElementById("contratos-total").textContent =
+            contratos.length;
+
+        document.getElementById("contratos-activos").textContent =
+            contratos.filter(c => c.estado === "ACTIVO").length;
+
+        document.getElementById("contratos-finalizados").textContent =
+            contratos.filter(c => c.estado === "FINALIZADO").length;
+
+        if (contratos.length === 0) return;
+
+        let empleadosPorId = new Map();
+
+        try {
+
+            const empleados = await window.empleadosAPI.obtenerTodos();
+
+            empleadosPorId = new Map(
+                empleados.map(e => [Number(e.id), e])
+            );
+
+        } catch (error) {
+            console.error("Error al consultar empleados:", error);
+        }
+
+        if (!tbody.isConnected) return;
+
+        tbody.innerHTML = contratos.map(contrato => {
+
+            const empleado = empleadosPorId.get(
+                Number(contrato.empleadoId)
+            );
+
+            const nombreEmpleado = empleado
+                ? empleado.nombre
+                : `Empleado ${contrato.empleadoId}`;
+
+            const claseEstado = {
+                ACTIVO: "contrato-estado-activo",
+                FINALIZADO: "contrato-estado-finalizado",
+                CANCELADO: "contrato-estado-cancelado"
+            }[contrato.estado] || "contrato-estado-finalizado";
+
+            return `
+            <tr>
+                <td class="contrato-codigo">
+                    <strong>
+                        CON-${String(contrato.id).padStart(6, "0")}
+                    </strong>
+                </td>
+
+                <td class="contrato-codigo">
+                    RES-${String(contrato.reservaId).padStart(6, "0")}
+                </td>
+
+                <td>${escaparHTML(nombreEmpleado)}</td>
+
+                <td class="contrato-moneda">
+                    ${formatoMoneda.format(contrato.garantia ?? 0)}
+                </td>
+
+                <td class="contrato-moneda">
+                    ${formatoMoneda.format(contrato.totalEstimado ?? 0)}
+                </td>
+
+                <td>
+                    <span class="contrato-estado ${claseEstado}">
+                        ${escaparHTML(contrato.estado)}
+                    </span>
+                </td>
+
+                <td class="contrato-fecha">
+                    ${escaparHTML(
+                contrato.fecha
+                    ? new Date(contrato.fecha)
+                        .toLocaleDateString("es-DO")
+                    : "—"
+            )}
+                </td>
+
+                <td>
+                    <button
+                        type="button"
+                        class="contrato-btn-detalle"
+                        data-contrato-id="${Number(contrato.id)}"
+                        title="Ver detalles"
+                        aria-label="Ver detalles del contrato"
+                    >
+                        <i data-lucide="eye"></i>
+                    </button>
+                </td>
+            </tr>
+        `;
+
+        }).join("");
+
+        tbody.querySelectorAll("[data-contrato-id]").forEach(boton => {
+
+            boton.addEventListener("click", () => {
+
+                const contrato = contratosConsultados.get(
+                    Number(boton.dataset.contratoId)
+                );
+
+                if (!contrato) return;
+
+                abrirModalDetalleContrato(contrato);
+
+            });
+
+        });
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    }
+
+    async function abrirModalDetalleContrato(contrato) {
+
+        if (document.getElementById("modal-detalle-contrato")) return;
+
+        const modal = document.createElement("div");
+
+        modal.id = "modal-detalle-contrato";
+        modal.className = "client-modal-overlay";
+
+        const codigo = `CON-${String(contrato.id).padStart(6, "0")}`;
+
+        modal.innerHTML = `
+        <div class="client-modal reserva-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="titulo-detalle-contrato">
+
+            <div class="client-modal-header">
+                <div>
+                    <h2 id="titulo-detalle-contrato">
+                        Detalles del contrato
+                    </h2>
+                    <p id="detalle-contrato-codigo"></p>
+                </div>
+
+                <button type="button"
+                        class="client-modal-close"
+                        id="cerrar-detalle-contrato"
+                        aria-label="Cerrar">
+                    ×
+                </button>
+            </div>
+
+            <div class="client-modal-body">
+                <div class="contrato-detalle-grid"
+                     id="contenido-detalle-contrato">
+                    <p>Cargando información...</p>
+                </div>
+            </div>
+
+            <div class="client-modal-footer">
+                <button type="button"
+                        class="btn-secondary"
+                        id="btn-cerrar-detalle-contrato">
+                    Cerrar
+                </button>
+            </div>
+
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        modal.querySelector("#detalle-contrato-codigo")
+            .textContent = codigo;
+
+        const cerrar = () => modal.remove();
+
+        modal.querySelector("#cerrar-detalle-contrato")
+            .addEventListener("click", cerrar);
+
+        modal.querySelector("#btn-cerrar-detalle-contrato")
+            .addEventListener("click", cerrar);
+
+        const formatoMoneda = new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP"
+        });
+
+        let reserva = null;
+        let empleado = null;
+        let cliente = null;
+        let vehiculo = null;
+
+        const resultados = await Promise.allSettled([
+            window.reservasAPI.obtenerPorId(contrato.reservaId),
+            window.empleadosAPI.obtenerPorId(contrato.empleadoId),
+            window.clientesAPI.obtenerTodos(),
+            window.vehiculosAPI.obtenerTodos()
+        ]);
+
+        if (resultados[0].status === "fulfilled") {
+            reserva = resultados[0].value;
+        }
+
+        if (resultados[1].status === "fulfilled") {
+            empleado = resultados[1].value;
+        }
+
+        if (reserva && resultados[2].status === "fulfilled") {
+
+            cliente = resultados[2].value.find(
+                c => Number(c.id) === Number(reserva.clienteId)
+            );
+        }
+
+        if (reserva && resultados[3].status === "fulfilled") {
+
+            vehiculo = resultados[3].value.find(
+                v => Number(v.id) === Number(reserva.vehiculoId)
+            );
+        }
+
+        if (!modal.isConnected) return;
+
+        const contenedor = modal.querySelector(
+            "#contenido-detalle-contrato"
+        );
+
+        contenedor.innerHTML = "";
+
+        const agregarCampo = (etiqueta, valor, completo = false) => {
+
+            const campo = document.createElement("div");
+
+            campo.className = completo
+                ? "contrato-detalle-campo contrato-detalle-full"
+                : "contrato-detalle-campo";
+
+            const label = document.createElement("span");
+            label.textContent = etiqueta;
+
+            const dato = document.createElement("strong");
+            dato.textContent = valor ?? "No disponible";
+
+            campo.append(label, dato);
+            contenedor.appendChild(campo);
+        };
+
+        agregarCampo("Número de contrato", codigo);
+
+        agregarCampo(
+            "Reserva asociada",
+            `RES-${String(contrato.reservaId).padStart(6, "0")}`
+        );
+
+        agregarCampo(
+            "Cliente",
+            cliente
+                ? [cliente.nombre, cliente.apellido]
+                    .filter(Boolean).join(" ")
+                : "No disponible",
+            true
+        );
+
+        agregarCampo(
+            "Vehículo",
+            vehiculo
+                ? [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
+                    .filter(Boolean).join(" ")
+                : "No disponible",
+            true
+        );
+
+        agregarCampo("Placa", vehiculo?.placa);
+
+        agregarCampo("Estado", contrato.estado);
+
+        agregarCampo("Inicio del alquiler", reserva?.inicio);
+
+        agregarCampo("Fin del alquiler", reserva?.fin);
+
+        agregarCampo(
+            "Empleado responsable",
+            empleado?.nombre ?? `Empleado ${contrato.empleadoId}`,
+            true
+        );
+
+        agregarCampo(
+            "Total estimado",
+            formatoMoneda.format(contrato.totalEstimado ?? 0)
+        );
+
+        agregarCampo(
+            "Monto de garantía",
+            formatoMoneda.format(contrato.garantia ?? 0)
+        );
+
+        agregarCampo(
+            "Fecha de registro",
+            contrato.fecha
+                ? new Date(contrato.fecha).toLocaleDateString("es-DO")
+                : "No disponible",
+            true
+        );
+    }
+
+    async function cargarEmpleadosContrato() {
+
+        const selector = document.getElementById("contrato-empleado");
+
+        if (!selector) return;
+
+        selector.disabled = true;
+
+        try {
+
+            const empleados = await window.empleadosAPI.obtenerTodos();
+
+            if (!selector.isConnected) return;
+
+            const empleadosActivos = empleados.filter(
+                empleado => empleado.activo === true
+            );
+
+            selector.innerHTML =
+                '<option value="">Selecciona un empleado</option>';
+
+            empleadosActivos.forEach(empleado => {
+
+                const opcion = document.createElement("option");
+
+                opcion.value = empleado.id;
+
+                opcion.textContent =
+                    `${empleado.nombre} — ${empleado.rol}`;
+
+                selector.appendChild(opcion);
+
+            });
+
+            if (empleadosActivos.length === 0) {
+
+                selector.innerHTML =
+                    '<option value="">No hay empleados activos</option>';
+
+                return;
+            }
+
+            selector.disabled = false;
+
+        } catch (error) {
+
+            selector.innerHTML =
+                '<option value="">Error al cargar empleados</option>';
+
+            console.error("Error al cargar empleados:", error);
+
+        }
+    }
+
+    async function abrirModalNuevoContrato() {
+        if (document.getElementById("modal-nuevo-contrato")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-nuevo-contrato";
+        modal.className = "client-modal-overlay";
+
+        modal.innerHTML = `
+        <div class="client-modal reserva-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="titulo-nuevo-contrato">
+            <div class="client-modal-header">
+            <div>
+                <h2 id="titulo-nuevo-contrato">Nuevo contrato</h2>
+                <p>Genera un contrato desde una reserva confirmada.</p>
+            </div>
+
+            <button type="button"
+                    class="client-modal-close"
+                    id="cerrar-modal-contrato"
+                    aria-label="Cerrar">
+                ×
+            </button>
+        </div>
+
+            <form id="form-nuevo-contrato">
+            <div class="client-modal-body">
+                <div class="client-form-grid">
+
+                    <div class="client-form-field client-form-full">
+                        <label for="contrato-reserva">Reserva confirmada</label>
+                        <select id="contrato-reserva" required>
+                            <option value="">Cargando reservas...</option>
+                        </select>
+                    </div>
+
+                    <div class="client-form-field client-form-full">
+                        <label for="contrato-total-estimado">
+                            Total estimado del alquiler
+                        </label>
+
+                        <input
+                            type="text"
+                            id="contrato-total-estimado"
+                            placeholder="Selecciona una reserva"
+                            readonly
+                        >
+                    </div>
+                </div>
+
+                <div class="client-form-field client-form-full">
+                    <label for="contrato-empleado">
+                        Empleado responsable *
+                    </label>
+
+                    <select id="contrato-empleado" required disabled>
+                        <option value="">Cargando empleados...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="contrato-garantia">Monto de garantía (RD$)</label>
+                    <input
+                        type="number"
+                        id="contrato-garantia"
+                        min="0"
+                        step="0.01"
+                        value="0"
+                        required
+                    >
+                </div>
+
+                <div class="modal-actions">
+                    <button type="button"
+                            class="btn-secondary"
+                            id="cancelar-contrato">
+                        Cancelar
+                    </button>
+                    <button type="submit"
+                            class="btn-primary"
+                            id="guardar-contrato">
+                        <i data-lucide="save"></i>
+                        Generar contrato
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        cargarEmpleadosContrato();
+
+        const cerrar = () => modal.remove();
+
+        document.getElementById("cerrar-modal-contrato")
+            .addEventListener("click", cerrar);
+
+        document.getElementById("cancelar-contrato")
+            .addEventListener("click", cerrar);
+
+        const selector = document.getElementById("contrato-reserva");
+
+        const totalEstimado = document.getElementById(
+            "contrato-total-estimado"
+        );
+
+        const formatoMoneda = new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP"
+        });
+
+        selector.addEventListener("change", () => {
+            const opcion = selector.options[selector.selectedIndex];
+
+            const total = opcion?.dataset.total;
+
+            totalEstimado.value =
+                total !== undefined && total !== ""
+                    ? formatoMoneda.format(Number(total))
+                    : "";
+        });
+
+        try {
+            const [reservas, clientes, vehiculos] = await Promise.all([
+                window.reservasAPI.obtenerTodas(),
+                window.clientesAPI.obtenerTodos(),
+                window.vehiculosAPI.obtenerTodos()
+            ]);
+
+            const clientesPorId = new Map(
+                clientes.map(cliente => [Number(cliente.id), cliente])
+            );
+
+            const vehiculosPorId = new Map(
+                vehiculos.map(vehiculo => [Number(vehiculo.id), vehiculo])
+            );
+
+            if (!modal.isConnected) return;
+
+            const confirmadas = reservas.filter(
+                reserva => reserva.estado === "CONFIRMADA"
+            );
+
+            selector.innerHTML = '<option value="">Selecciona una reserva</option>';
+
+            confirmadas.forEach(reserva => {
+                const cliente = clientesPorId.get(Number(reserva.clienteId));
+                const vehiculo = vehiculosPorId.get(Number(reserva.vehiculoId));
+
+                const nombreCliente = cliente
+                    ? [cliente.nombre, cliente.apellido]
+                        .filter(Boolean)
+                        .join(" ")
+                    : `Cliente ${reserva.clienteId}`;
+
+                const nombreVehiculo = vehiculo
+                    ? [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
+                        .filter(Boolean)
+                        .join(" ")
+                    : `Vehículo ${reserva.vehiculoId}`;
+
+                const opcion = document.createElement("option");
+
+                opcion.value = reserva.id;
+                opcion.dataset.total = reserva.total ?? "";
+
+                opcion.textContent =
+                    `RES-${String(reserva.id).padStart(6, "0")} — ` +
+                    `${nombreCliente} — ${nombreVehiculo}`;
+
+                selector.appendChild(opcion);
+            });
+
+            if (confirmadas.length === 0) {
+                selector.innerHTML =
+                    '<option value="">No hay reservas confirmadas</option>';
+                selector.disabled = true;
+            }
+        } catch (error) {
+            selector.innerHTML =
+                '<option value="">Error al cargar reservas</option>';
+            selector.disabled = true;
+            alert(`No se pudieron cargar las reservas: ${error.message}`);
+        }
+
+        if (window.lucide) window.lucide.createIcons();
+
+        document.getElementById("form-nuevo-contrato")
+            .addEventListener("submit", async (evento) => {
+                evento.preventDefault();
+
+                const reservaId = Number(selector.value);
+                const empleadoId = Number(
+                    document.getElementById("contrato-empleado").value
+                );
+                const montoGarantia = Number(
+                    document.getElementById("contrato-garantia").value
+                );
+
+                if (!Number.isSafeInteger(reservaId) || reservaId < 1 ||
+                    !Number.isSafeInteger(empleadoId) || empleadoId < 1 ||
+                    !Number.isFinite(montoGarantia) || montoGarantia < 0) {
+                    alert("Verifica los datos del contrato.");
+                    return;
+                }
+
+                const boton = document.getElementById("guardar-contrato");
+                boton.disabled = true;
+                boton.textContent = "Generando contrato...";
+
+                try {
+                    const contrato = await window.contratosAPI.crear({
+                        reservaId,
+                        empleadoId,
+                        montoGarantia
+                    });
+
+                    contratosConsultados.set(Number(contrato.id), contrato);
+                    renderizarContratosConsultados();
+
+                    cerrar();
+
+                    alert(
+                        `Contrato CON-${String(contrato.id).padStart(6, "0")} ` +
+                        "generado correctamente."
+                    );
+
+                } catch (error) {
+                    alert(`No se pudo generar el contrato: ${error.message}`);
+                } finally {
+                    if (boton.isConnected) {
+                        boton.disabled = false;
+                        boton.textContent = "Generar contrato";
+                    }
+                }
+            });
     }
 
     async function mostrarReservas() {

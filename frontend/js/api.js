@@ -180,3 +180,39 @@ const reservasAPI = {
 };
 
 window.reservasAPI = reservasAPI;
+
+const contratosAPI = {
+    crear: async (contrato) => {
+        return apiRequest("/contratos", {
+            method: "POST",
+            body: JSON.stringify(contrato)
+        });
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/contratos/${encodeURIComponent(id)}`);
+    }
+};
+
+window.contratosAPI = contratosAPI;
+
+const empleadosAPI = {
+
+    obtenerTodos: async () => {
+        return apiRequest("/empleados");
+    },
+
+    obtenerPorId: async (id) => {
+        return apiRequest(`/empleados/${encodeURIComponent(id)}`);
+    },
+
+    registrar: async (empleado) => {
+        return apiRequest("/empleados", {
+            method: "POST",
+            body: JSON.stringify(empleado)
+        });
+    }
+
+};
+
+window.empleadosAPI = empleadosAPI;

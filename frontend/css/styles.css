@@ -2489,3 +2489,116 @@ button, a {
     opacity: 1;
     visibility: visible;
 }
+
+.contrato-codigo,
+.contrato-moneda,
+.contrato-fecha {
+    white-space: nowrap;
+}
+
+.contrato-estado {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 11px;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.contrato-estado-activo {
+    background: #dcfce7;
+    color: #15803d;
+}
+
+.contrato-estado-finalizado {
+    background: #e2e8f0;
+    color: #475569;
+}
+
+.contrato-estado-cancelado {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.contrato-btn-detalle {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 34px;
+    height: 34px;
+    border: 1px solid #d9dee5;
+    border-radius: 6px;
+    background: #ffffff;
+    color: #475569;
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.contrato-btn-detalle:hover {
+    background: #fff1f2;
+    border-color: #cf202f;
+    color: #cf202f;
+}
+
+.contrato-btn-detalle svg {
+    width: 17px;
+    height: 17px;
+}
+
+#contratos-table-body td {
+    vertical-align: middle;
+}
+
+.contrato-detalle-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 16px;
+}
+
+.contrato-detalle-campo {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    padding: 16px;
+    background: #f8fafc;
+    border: 1px solid #e5e7eb;
+    border-radius: 8px;
+}
+
+.contrato-detalle-campo span {
+    font-size: 12px;
+    font-weight: 500;
+    color: #64748b;
+}
+
+.contrato-detalle-campo strong {
+    font-size: 14px;
+    font-weight: 600;
+    color: #202630;
+    overflow-wrap: anywhere;
+}
+
+.contrato-detalle-full {
+    grid-column: 1 / -1;
+}
+
+#modal-detalle-contrato .client-modal-footer,
+#modal-nuevo-contrato .client-modal-footer {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+}
+
+#modal-nuevo-contrato .client-form-grid {
+    row-gap: 20px;
+}
+
+@media (max-width: 480px) {
+
+    .contrato-detalle-grid {
+        grid-template-columns: 1fr;
+    }
+
+}

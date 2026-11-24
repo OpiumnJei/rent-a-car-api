@@ -5,8 +5,122 @@ document.addEventListener("DOMContentLoaded", () => {
     const sidebar = document.getElementById("sidebar");
     const botonMenu = document.getElementById("menu-toggle");
 
-    // Conservamos el diseño completo del panel principal.
     const panelPrincipal = contenido.innerHTML;
+
+    function formatearCodigo(prefijo, id) {
+        if (id === null || id === undefined || id === "") {
+            return "—";
+        }
+
+        return `${prefijo}-${String(id).padStart(6, "0")}`;
+    }
+
+    function mostrarModalExito(titulo, mensaje, codigo = "") {
+
+        const modalAnterior = document.getElementById("modal-exito");
+
+        if (modalAnterior) {
+            modalAnterior.remove();
+        }
+
+        const modal = document.createElement("div");
+
+        modal.id = "modal-exito";
+        modal.className = "exito-modal-overlay";
+
+        modal.innerHTML = `
+        <div class="exito-modal"
+             role="dialog"
+             aria-modal="true"
+             aria-labelledby="exito-titulo"
+             aria-describedby="exito-mensaje">
+
+            <button type="button"
+                    class="exito-modal-close"
+                    aria-label="Cerrar">
+                <i data-lucide="x"></i>
+            </button>
+
+            <div class="exito-modal-icono">
+                <i data-lucide="check-circle"></i>
+            </div>
+
+            <h2 id="exito-titulo"></h2>
+
+            <p id="exito-mensaje"></p>
+
+            <div class="exito-modal-registro">
+                <span>Código de registro</span>
+                <strong id="exito-codigo"></strong>
+            </div>
+
+            <button type="button"
+                    class="exito-modal-aceptar">
+                Aceptar
+            </button>
+
+        </div>
+    `;
+
+        modal.querySelector("#exito-titulo").textContent = titulo;
+        modal.querySelector("#exito-mensaje").textContent = mensaje;
+        modal.querySelector("#exito-codigo").textContent = codigo;
+
+        if (!codigo) {
+            modal.querySelector(".exito-modal-registro").hidden = true;
+        }
+
+        const focoAnterior = document.activeElement;
+
+        function cerrar() {
+            modal.remove();
+
+            if (focoAnterior && focoAnterior.isConnected) {
+                focoAnterior.focus();
+            }
+        }
+
+        modal.querySelector(".exito-modal-close")
+            .addEventListener("click", cerrar);
+
+        modal.querySelector(".exito-modal-aceptar")
+            .addEventListener("click", cerrar);
+
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) {
+                cerrar();
+            }
+        });
+
+        modal.addEventListener("keydown", evento => {
+
+            if (evento.key === "Escape") {
+                cerrar();
+            }
+
+            if (evento.key === "Tab") {
+                const botones = modal.querySelectorAll("button");
+                const primero = botones[0];
+                const ultimo = botones[botones.length - 1];
+
+                if (evento.shiftKey && document.activeElement === primero) {
+                    evento.preventDefault();
+                    ultimo.focus();
+                } else if (!evento.shiftKey && document.activeElement === ultimo) {
+                    evento.preventDefault();
+                    primero.focus();
+                }
+            }
+        });
+
+        document.body.appendChild(modal);
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        modal.querySelector(".exito-modal-aceptar").focus();
+    }
 
     const modulos = {
         dashboard: {
@@ -340,12 +454,12 @@ document.addEventListener("DOMContentLoaded", () => {
             <tr>
                 <td class="contrato-codigo">
                     <strong>
-                        CON-${String(contrato.id).padStart(6, "0")}
+                        ${formatearCodigo("CON", contrato.id)}
                     </strong>
                 </td>
 
                 <td class="contrato-codigo">
-                    RES-${String(contrato.reservaId).padStart(6, "0")}
+                    ${formatearCodigo("RES", contrato.reservaId)}
                 </td>
 
                 <td>${escaparHTML(nombreEmpleado)}</td>
@@ -820,7 +934,7 @@ document.addEventListener("DOMContentLoaded", () => {
                 opcion.dataset.total = reserva.total ?? "";
 
                 opcion.textContent =
-                    `RES-${String(reserva.id).padStart(6, "0")} — ` +
+                    `${formatearCodigo("RES", reserva.id)} — ` +
                     `${nombreCliente} — ${nombreVehiculo}`;
 
                 selector.appendChild(opcion);
@@ -875,9 +989,10 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     cerrar();
 
-                    alert(
-                        `Contrato CON-${String(contrato.id).padStart(6, "0")} ` +
-                        "generado correctamente."
+                    mostrarModalExito(
+                        "¡Contrato generado!",
+                        "El contrato de alquiler se ha generado correctamente.",
+                        formatearCodigo("CON", contrato.id)
                     );
 
                 } catch (error) {
@@ -1792,7 +1907,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     cerrar();
 
-                    alert(`Reserva #${reserva.id} registrada correctamente.`);
+                    mostrarModalExito(
+                        "¡Reserva registrada!",
+                        "La reserva se ha registrado correctamente en el sistema.",
+                        formatearCodigo("RES", reserva.id)
+                    );
 
                     if (location.hash === "#reservas") {
                         await mostrarReservas();
@@ -2116,9 +2235,18 @@ document.addEventListener("DOMContentLoaded", () => {
         mensaje.textContent = "Guardando cliente...";
 
         try {
-            await window.clientesAPI.registrar(cliente);
+            const clienteRegistrado =
+                await window.clientesAPI.registrar(cliente);
 
             cerrar();
+
+            mostrarModalExito(
+                "¡Cliente registrado!",
+                "El cliente se ha registrado correctamente en el sistema.",
+                clienteRegistrado?.id != null
+                    ? formatearCodigo("CLI", clienteRegistrado.id)
+                    : ""
+            );
 
             if (window.location.hash === "#clientes") {
                 await mostrarClientes();
@@ -2651,10 +2779,20 @@ document.addEventListener("DOMContentLoaded", () => {
         mensaje.textContent = "Guardando licencia...";
 
         try {
-            await window.clientesAPI.registrarLicencia(licencia);
+            const licenciaRegistrada =
+                await window.clientesAPI.registrarLicencia(licencia);
 
             cerrar();
+
             await abrirModalLicencias(cliente);
+
+            mostrarModalExito(
+                "¡Licencia registrada!",
+                "La licencia de conducir se ha asociado correctamente al cliente.",
+                licenciaRegistrada?.id != null
+                    ? formatearCodigo("LIC", licenciaRegistrada.id)
+                    : ""
+            );
 
         } catch (error) {
             console.error("Error al registrar licencia:", error);
@@ -2686,13 +2824,12 @@ document.addEventListener("DOMContentLoaded", () => {
         const fila = document.createElement("tr");
 
         const valores = [
-            cliente.id,
+            formatearCodigo("CLI", cliente.id),
             `${cliente.nombre || ""} ${cliente.apellido || ""}`.trim(),
             cliente.documento || "—",
             cliente.telefono || "—",
             cliente.email || "—"
         ];
-
         valores.forEach(valor => {
             const celda = document.createElement("td");
             celda.textContent = valor ?? "—";
@@ -3010,9 +3147,18 @@ document.addEventListener("DOMContentLoaded", () => {
             mensaje.textContent = "";
 
             try {
-                await window.sucursalesAPI.crear(sucursal);
+                const sucursalRegistrada =
+                    await window.sucursalesAPI.crear(sucursal);
 
                 cerrar();
+
+                mostrarModalExito(
+                    "¡Sucursal registrada!",
+                    "La sucursal se ha registrado correctamente en el sistema.",
+                    sucursalRegistrada?.id != null
+                        ? formatearCodigo("SUC", sucursalRegistrada.id)
+                        : ""
+                );
 
                 if (location.hash === "#sucursales") {
                     await mostrarSucursales();
@@ -3054,7 +3200,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const fila = document.createElement("tr");
 
             const datos = [
-                sucursal.id,
+                formatearCodigo("SUC", sucursal.id),
                 sucursal.nombre,
                 sucursal.direccion,
                 sucursal.telefono
@@ -3406,15 +3552,24 @@ document.addEventListener("DOMContentLoaded", () => {
             const fila = cuerpoTabla.insertRow();
 
             const valores = [
-                vehiculo.id,
+                formatearCodigo("VEH", vehiculo.id),
                 vehiculo.placa,
                 vehiculo.marca,
                 vehiculo.modelo,
                 vehiculo.anio,
                 nombresSucursales.get(vehiculo.sucursalId)
-                ?? `Sucursal #${vehiculo.sucursalId}`,
+                ?? formatearCodigo("SUC", vehiculo.sucursalId),
                 vehiculo.kilometraje
             ];
+
+            valores.forEach((valor, indice) => {
+                const celda = fila.insertCell();
+                celda.textContent = valor ?? "—";
+
+                if (indice === 0) {
+                    celda.classList.add("registro-codigo");
+                }
+            });
 
             valores.forEach(valor => {
                 const celda = fila.insertCell();
@@ -3762,9 +3917,18 @@ document.addEventListener("DOMContentLoaded", () => {
             mensaje.textContent = "";
 
             try {
-                await window.vehiculosAPI.registrar(vehiculo);
+                const vehiculoRegistrado =
+                    await window.vehiculosAPI.registrar(vehiculo);
 
                 cerrar();
+
+                mostrarModalExito(
+                    "¡Vehículo registrado!",
+                    "El vehículo se ha registrado correctamente en la flota.",
+                    vehiculoRegistrado?.id != null
+                        ? formatearCodigo("VEH", vehiculoRegistrado.id)
+                        : ""
+                );
 
                 if (location.hash === "#vehiculos") {
                     await mostrarVehiculos();

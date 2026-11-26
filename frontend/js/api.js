@@ -198,6 +198,19 @@ const contratosAPI = {
 
 window.contratosAPI = contratosAPI;
 
+const inspeccionesAPI = {
+    obtenerPorContrato: (contratoId) =>
+        apiRequest(`/contratos/${contratoId}/inspecciones`),
+
+    registrar: (datos) =>
+        apiRequest("/inspecciones", {
+            method: "POST",
+            body: JSON.stringify(datos)
+        })
+};
+
+window.inspeccionesAPI = inspeccionesAPI;
+
 
 const empleadosAPI = {
 

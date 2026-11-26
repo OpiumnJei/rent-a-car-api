@@ -1,126 +1,13 @@
 
+
 document.addEventListener("DOMContentLoaded", () => {
     const enlaces = document.querySelectorAll(".nav-link");
     const contenido = document.getElementById("main-content");
     const sidebar = document.getElementById("sidebar");
     const botonMenu = document.getElementById("menu-toggle");
 
+    // Conservamos el diseño completo del panel principal.
     const panelPrincipal = contenido.innerHTML;
-
-    function formatearCodigo(prefijo, id) {
-        if (id === null || id === undefined || id === "") {
-            return "—";
-        }
-
-        return `${prefijo}-${String(id).padStart(6, "0")}`;
-    }
-
-    function mostrarModalExito(titulo, mensaje, codigo = "") {
-
-        const modalAnterior = document.getElementById("modal-exito");
-
-        if (modalAnterior) {
-            modalAnterior.remove();
-        }
-
-        const modal = document.createElement("div");
-
-        modal.id = "modal-exito";
-        modal.className = "exito-modal-overlay";
-
-        modal.innerHTML = `
-        <div class="exito-modal"
-             role="dialog"
-             aria-modal="true"
-             aria-labelledby="exito-titulo"
-             aria-describedby="exito-mensaje">
-
-            <button type="button"
-                    class="exito-modal-close"
-                    aria-label="Cerrar">
-                <i data-lucide="x"></i>
-            </button>
-
-            <div class="exito-modal-icono">
-                <i data-lucide="check-circle"></i>
-            </div>
-
-            <h2 id="exito-titulo"></h2>
-
-            <p id="exito-mensaje"></p>
-
-            <div class="exito-modal-registro">
-                <span>Código de registro</span>
-                <strong id="exito-codigo"></strong>
-            </div>
-
-            <button type="button"
-                    class="exito-modal-aceptar">
-                Aceptar
-            </button>
-
-        </div>
-    `;
-
-        modal.querySelector("#exito-titulo").textContent = titulo;
-        modal.querySelector("#exito-mensaje").textContent = mensaje;
-        modal.querySelector("#exito-codigo").textContent = codigo;
-
-        if (!codigo) {
-            modal.querySelector(".exito-modal-registro").hidden = true;
-        }
-
-        const focoAnterior = document.activeElement;
-
-        function cerrar() {
-            modal.remove();
-
-            if (focoAnterior && focoAnterior.isConnected) {
-                focoAnterior.focus();
-            }
-        }
-
-        modal.querySelector(".exito-modal-close")
-            .addEventListener("click", cerrar);
-
-        modal.querySelector(".exito-modal-aceptar")
-            .addEventListener("click", cerrar);
-
-        modal.addEventListener("click", evento => {
-            if (evento.target === modal) {
-                cerrar();
-            }
-        });
-
-        modal.addEventListener("keydown", evento => {
-
-            if (evento.key === "Escape") {
-                cerrar();
-            }
-
-            if (evento.key === "Tab") {
-                const botones = modal.querySelectorAll("button");
-                const primero = botones[0];
-                const ultimo = botones[botones.length - 1];
-
-                if (evento.shiftKey && document.activeElement === primero) {
-                    evento.preventDefault();
-                    ultimo.focus();
-                } else if (!evento.shiftKey && document.activeElement === ultimo) {
-                    evento.preventDefault();
-                    primero.focus();
-                }
-            }
-        });
-
-        document.body.appendChild(modal);
-
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
-
-        modal.querySelector(".exito-modal-aceptar").focus();
-    }
 
     const modulos = {
         dashboard: {
@@ -169,8 +56,6 @@ document.addEventListener("DOMContentLoaded", () => {
              window.lucide.createIcons();
            }
 
-           cargarDashboard();
-
            return;
         }        
         if (nombre === "sucursales") {
@@ -189,8 +74,8 @@ document.addEventListener("DOMContentLoaded", () => {
             mostrarReservas();
             return;
         }
-        if (nombre === "contratos") {
-            mostrarContratos();
+        if (nombre === "inspecciones") {
+            mostrarInspecciones();
             return;
         }
 
@@ -226,906 +111,6 @@ document.addEventListener("DOMContentLoaded", () => {
         contenido.append(encabezado, panel);
     }
 
-    async function mostrarContratos() {
-    contenido.innerHTML = `
-        <section class="page-header">
-            <div>
-                <h1>Gestión de contratos</h1>
-                <p class="page-description">
-                    Administración y seguimiento de contratos
-                    de alquiler de vehículos.
-                </p>
-            </div>
-        </section>
-
-        <section class="reservas-stats">
-            <div class="reserva-stat-card">
-                <div class="reserva-stat-icon">
-                    <i data-lucide="file-text"></i>
-                </div>
-                <div>
-                    <span>Contratos consultados</span>
-                    <strong id="contratos-total">0</strong>
-                </div>
-            </div>
-
-            <div class="reserva-stat-card">
-                <div class="reserva-stat-icon">
-                    <i data-lucide="check-circle"></i>
-                </div>
-                <div>
-                    <span>Activos consultados</span>
-                    <strong id="contratos-activos">0</strong>
-                </div>
-            </div>
-
-            <div class="reserva-stat-card">
-                <div class="reserva-stat-icon">
-                    <i data-lucide="file-check"></i>
-                </div>
-                <div>
-                    <span>Finalizados consultados</span>
-                    <strong id="contratos-finalizados">0</strong>
-                </div>
-            </div>
-        </section>
-
-        <div class="reservas-section-heading">
-            <h3>Consulta de contratos</h3>
-            <p>
-                Busca contratos por su identificador
-                o genera uno desde una reserva confirmada.
-            </p>
-        </div>
-
-        <section class="content-panel branches-panel reservas-list-panel">
-            <div class="branches-toolbar reservas-list-toolbar">
-                <div class="reservas-search-input">
-                    <i data-lucide="search"></i>
-                    <input
-                        type="number"
-                        id="buscar-contrato"
-                        min="1"
-                        step="1"
-                        placeholder="Número de contrato..."
-                        aria-label="Buscar contrato por ID"
-                    >
-                </div>
-
-                <button
-                    type="button"
-                    class="btn-primary"
-                    id="btn-nuevo-contrato"
-                >
-                    <i data-lucide="file-plus"></i>
-                    Nuevo contrato
-                </button>
-            </div>
-
-            <div class="branches-table-container">
-                <table class="branches-table">
-                    <thead>
-                        <tr>
-                            <th>ID</th>
-                            <th>Reserva</th>
-                            <th>Empleado</th>
-                            <th>Garantía</th>
-                            <th>Total estimado</th>
-                            <th>Estado</th>
-                            <th>Fecha</th>
-                            <th>Acciones</th>
-                        </tr>
-                    </thead>
-
-                    <tbody id="contratos-table-body">
-                        <tr>
-                            <td colspan="8">
-                                <div class="reservas-empty">
-                                    <i data-lucide="file-search"></i>
-                                    <h3>Consulta tus contratos</h3>
-                                    <p>
-                                        Introduce el número de un contrato
-                                        para consultar su información.
-                                    </p>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
-        </section>
-    `;
-
-    renderizarContratosConsultados();
-
-    if (window.lucide) {
-        window.lucide.createIcons();
-    }
-
-    document
-        .getElementById("btn-nuevo-contrato")
-        .addEventListener("click", abrirModalNuevoContrato);
-
-    document
-        .getElementById("buscar-contrato")
-        .addEventListener("change", async (evento) => {
-            const id = evento.target.value.trim();
-
-            if (!id) return;
-
-            await buscarContratoPorId(id);
-        });
-    }
-
-    const contratosConsultados = new Map();
-
-    async function buscarContratoPorId(id) {
-        const tbody = document.getElementById("contratos-table-body");
-
-        if (!tbody) return;
-
-        const identificador = Number(id);
-
-        if (!Number.isSafeInteger(identificador) || identificador < 1) {
-            alert("Introduce un número de contrato válido.");
-            return;
-        }
-
-        try {
-            const contrato = await window.contratosAPI.obtenerPorId(identificador);
-
-            contratosConsultados.set(Number(contrato.id), contrato);
-
-            renderizarContratosConsultados();
-
-        } catch (error) {
-            alert(`No se pudo consultar el contrato: ${error.message}`);
-        }
-    }
-
-    async function renderizarContratosConsultados() {
-
-        const tbody = document.getElementById("contratos-table-body");
-
-        if (!tbody) return;
-
-        const contratos = [...contratosConsultados.values()];
-
-        const formatoMoneda = new Intl.NumberFormat("es-DO", {
-            style: "currency",
-            currency: "DOP"
-        });
-
-        const escaparHTML = valor => String(valor ?? "").replace(
-            /[&<>"']/g,
-            caracter => ({
-                "&": "&amp;",
-                "<": "&lt;",
-                ">": "&gt;",
-                '"': "&quot;",
-                "'": "&#39;"
-            })[caracter]
-        );
-
-        document.getElementById("contratos-total").textContent =
-            contratos.length;
-
-        document.getElementById("contratos-activos").textContent =
-            contratos.filter(c => c.estado === "ACTIVO").length;
-
-        document.getElementById("contratos-finalizados").textContent =
-            contratos.filter(c => c.estado === "FINALIZADO").length;
-
-        if (contratos.length === 0) return;
-
-        let empleadosPorId = new Map();
-
-        try {
-
-            const empleados = await window.empleadosAPI.obtenerTodos();
-
-            empleadosPorId = new Map(
-                empleados.map(e => [Number(e.id), e])
-            );
-
-        } catch (error) {
-            console.error("Error al consultar empleados:", error);
-        }
-
-        if (!tbody.isConnected) return;
-
-        tbody.innerHTML = contratos.map(contrato => {
-
-            const empleado = empleadosPorId.get(
-                Number(contrato.empleadoId)
-            );
-
-            const nombreEmpleado = empleado
-                ? empleado.nombre
-                : `Empleado ${contrato.empleadoId}`;
-
-            const claseEstado = {
-                ACTIVO: "contrato-estado-activo",
-                FINALIZADO: "contrato-estado-finalizado",
-                CANCELADO: "contrato-estado-cancelado"
-            }[contrato.estado] || "contrato-estado-finalizado";
-
-            return `
-            <tr>
-                <td class="contrato-codigo">
-                    <strong>
-                        ${formatearCodigo("CON", contrato.id)}
-                    </strong>
-                </td>
-
-                <td class="contrato-codigo">
-                    ${formatearCodigo("RES", contrato.reservaId)}
-                </td>
-
-                <td>${escaparHTML(nombreEmpleado)}</td>
-
-                <td class="contrato-moneda">
-                    ${formatoMoneda.format(contrato.garantia ?? 0)}
-                </td>
-
-                <td class="contrato-moneda">
-                    ${formatoMoneda.format(contrato.totalEstimado ?? 0)}
-                </td>
-
-                <td>
-                    <span class="contrato-estado ${claseEstado}">
-                        ${escaparHTML(contrato.estado)}
-                    </span>
-                </td>
-
-                <td class="contrato-fecha">
-                    ${escaparHTML(
-                contrato.fecha
-                    ? new Date(contrato.fecha)
-                        .toLocaleDateString("es-DO")
-                    : "—"
-            )}
-                </td>
-
-                <td>
-                    <button
-                        type="button"
-                        class="contrato-btn-detalle"
-                        data-contrato-id="${Number(contrato.id)}"
-                        title="Ver detalles"
-                        aria-label="Ver detalles del contrato"
-                    >
-                        <i data-lucide="eye"></i>
-                    </button>
-                </td>
-            </tr>
-        `;
-
-        }).join("");
-
-        tbody.querySelectorAll("[data-contrato-id]").forEach(boton => {
-
-            boton.addEventListener("click", () => {
-
-                const contrato = contratosConsultados.get(
-                    Number(boton.dataset.contratoId)
-                );
-
-                if (!contrato) return;
-
-                abrirModalDetalleContrato(contrato);
-
-            });
-
-        });
-
-        if (window.lucide) {
-            window.lucide.createIcons();
-        }
-    }
-
-    async function abrirModalDetalleContrato(contrato) {
-
-        if (document.getElementById("modal-detalle-contrato")) return;
-
-        const modal = document.createElement("div");
-
-        modal.id = "modal-detalle-contrato";
-        modal.className = "client-modal-overlay";
-
-        const codigo = `CON-${String(contrato.id).padStart(6, "0")}`;
-
-        modal.innerHTML = `
-        <div class="client-modal reserva-modal"
-             role="dialog"
-             aria-modal="true"
-             aria-labelledby="titulo-detalle-contrato">
-
-            <div class="client-modal-header">
-                <div>
-                    <h2 id="titulo-detalle-contrato">
-                        Detalles del contrato
-                    </h2>
-                    <p id="detalle-contrato-codigo"></p>
-                </div>
-
-                <button type="button"
-                        class="client-modal-close"
-                        id="cerrar-detalle-contrato"
-                        aria-label="Cerrar">
-                    ×
-                </button>
-            </div>
-
-            <div class="client-modal-body">
-                <div class="contrato-detalle-grid"
-                     id="contenido-detalle-contrato">
-                    <p>Cargando información...</p>
-                </div>
-            </div>
-
-            <div class="client-modal-footer">
-                <button type="button"
-                        class="btn-secondary"
-                        id="btn-cerrar-detalle-contrato">
-                    Cerrar
-                </button>
-            </div>
-
-        </div>
-    `;
-
-        document.body.appendChild(modal);
-
-        modal.querySelector("#detalle-contrato-codigo")
-            .textContent = codigo;
-
-        const cerrar = () => modal.remove();
-
-        modal.querySelector("#cerrar-detalle-contrato")
-            .addEventListener("click", cerrar);
-
-        modal.querySelector("#btn-cerrar-detalle-contrato")
-            .addEventListener("click", cerrar);
-
-        const formatoMoneda = new Intl.NumberFormat("es-DO", {
-            style: "currency",
-            currency: "DOP"
-        });
-
-        let reserva = null;
-        let empleado = null;
-        let cliente = null;
-        let vehiculo = null;
-
-        const resultados = await Promise.allSettled([
-            window.reservasAPI.obtenerPorId(contrato.reservaId),
-            window.empleadosAPI.obtenerPorId(contrato.empleadoId),
-            window.clientesAPI.obtenerTodos(),
-            window.vehiculosAPI.obtenerTodos()
-        ]);
-
-        if (resultados[0].status === "fulfilled") {
-            reserva = resultados[0].value;
-        }
-
-        if (resultados[1].status === "fulfilled") {
-            empleado = resultados[1].value;
-        }
-
-        if (reserva && resultados[2].status === "fulfilled") {
-
-            cliente = resultados[2].value.find(
-                c => Number(c.id) === Number(reserva.clienteId)
-            );
-        }
-
-        if (reserva && resultados[3].status === "fulfilled") {
-
-            vehiculo = resultados[3].value.find(
-                v => Number(v.id) === Number(reserva.vehiculoId)
-            );
-        }
-
-        if (!modal.isConnected) return;
-
-        const contenedor = modal.querySelector(
-            "#contenido-detalle-contrato"
-        );
-
-        contenedor.innerHTML = "";
-
-        const agregarCampo = (etiqueta, valor, completo = false) => {
-
-            const campo = document.createElement("div");
-
-            campo.className = completo
-                ? "contrato-detalle-campo contrato-detalle-full"
-                : "contrato-detalle-campo";
-
-            const label = document.createElement("span");
-            label.textContent = etiqueta;
-
-            const dato = document.createElement("strong");
-            dato.textContent = valor ?? "No disponible";
-
-            campo.append(label, dato);
-            contenedor.appendChild(campo);
-        };
-
-        agregarCampo("Número de contrato", codigo);
-
-        agregarCampo(
-            "Reserva asociada",
-            `RES-${String(contrato.reservaId).padStart(6, "0")}`
-        );
-
-        agregarCampo(
-            "Cliente",
-            cliente
-                ? [cliente.nombre, cliente.apellido]
-                    .filter(Boolean).join(" ")
-                : "No disponible",
-            true
-        );
-
-        agregarCampo(
-            "Vehículo",
-            vehiculo
-                ? [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
-                    .filter(Boolean).join(" ")
-                : "No disponible",
-            true
-        );
-
-        agregarCampo("Placa", vehiculo?.placa);
-
-        agregarCampo("Estado", contrato.estado);
-
-        agregarCampo("Inicio del alquiler", reserva?.inicio);
-
-        agregarCampo("Fin del alquiler", reserva?.fin);
-
-        agregarCampo(
-            "Empleado responsable",
-            empleado?.nombre ?? `Empleado ${contrato.empleadoId}`,
-            true
-        );
-
-        agregarCampo(
-            "Total estimado",
-            formatoMoneda.format(contrato.totalEstimado ?? 0)
-        );
-
-        agregarCampo(
-            "Monto de garantía",
-            formatoMoneda.format(contrato.garantia ?? 0)
-        );
-
-        agregarCampo(
-            "Fecha de registro",
-            contrato.fecha
-                ? new Date(contrato.fecha).toLocaleDateString("es-DO")
-                : "No disponible",
-            true
-        );
-    }
-
-    async function cargarEmpleadosContrato() {
-
-        const selector = document.getElementById("contrato-empleado");
-
-        if (!selector) return;
-
-        selector.disabled = true;
-
-        try {
-
-            const empleados = await window.empleadosAPI.obtenerTodos();
-
-            if (!selector.isConnected) return;
-
-            const empleadosActivos = empleados.filter(
-                empleado => empleado.activo === true
-            );
-
-            selector.innerHTML =
-                '<option value="">Selecciona un empleado</option>';
-
-            empleadosActivos.forEach(empleado => {
-
-                const opcion = document.createElement("option");
-
-                opcion.value = empleado.id;
-
-                opcion.textContent =
-                    `${empleado.nombre} — ${empleado.rol}`;
-
-                selector.appendChild(opcion);
-
-            });
-
-            if (empleadosActivos.length === 0) {
-
-                selector.innerHTML =
-                    '<option value="">No hay empleados activos</option>';
-
-                return;
-            }
-
-            selector.disabled = false;
-
-        } catch (error) {
-
-            selector.innerHTML =
-                '<option value="">Error al cargar empleados</option>';
-
-            console.error("Error al cargar empleados:", error);
-
-        }
-    }
-
-    async function abrirModalNuevoContrato() {
-        if (document.getElementById("modal-nuevo-contrato")) return;
-
-        const modal = document.createElement("div");
-        modal.id = "modal-nuevo-contrato";
-        modal.className = "client-modal-overlay";
-
-        modal.innerHTML = `
-        <div class="client-modal reserva-modal"
-            role="dialog"
-            aria-modal="true"
-            aria-labelledby="titulo-nuevo-contrato">
-            <div class="client-modal-header">
-            <div>
-                <h2 id="titulo-nuevo-contrato">Nuevo contrato</h2>
-                <p>Genera un contrato desde una reserva confirmada.</p>
-            </div>
-
-            <button type="button"
-                    class="client-modal-close"
-                    id="cerrar-modal-contrato"
-                    aria-label="Cerrar">
-                ×
-            </button>
-        </div>
-
-            <form id="form-nuevo-contrato">
-            <div class="client-modal-body">
-                <div class="client-form-grid">
-
-                    <div class="client-form-field client-form-full">
-                        <label for="contrato-reserva">Reserva confirmada</label>
-                        <select id="contrato-reserva" required>
-                            <option value="">Cargando reservas...</option>
-                        </select>
-                    </div>
-
-                    <div class="client-form-field client-form-full">
-                        <label for="contrato-total-estimado">
-                            Total estimado del alquiler
-                        </label>
-
-                        <input
-                            type="text"
-                            id="contrato-total-estimado"
-                            placeholder="Selecciona una reserva"
-                            readonly
-                        >
-                    </div>
-                </div>
-
-                <div class="client-form-field client-form-full">
-                    <label for="contrato-empleado">
-                        Empleado responsable *
-                    </label>
-
-                    <select id="contrato-empleado" required disabled>
-                        <option value="">Cargando empleados...</option>
-                    </select>
-                </div>
-
-                <div class="form-group">
-                    <label for="contrato-garantia">Monto de garantía (RD$)</label>
-                    <input
-                        type="number"
-                        id="contrato-garantia"
-                        min="0"
-                        step="0.01"
-                        value="0"
-                        required
-                    >
-                </div>
-
-                <div class="modal-actions">
-                    <button type="button"
-                            class="btn-secondary"
-                            id="cancelar-contrato">
-                        Cancelar
-                    </button>
-                    <button type="submit"
-                            class="btn-primary"
-                            id="guardar-contrato">
-                        <i data-lucide="save"></i>
-                        Generar contrato
-                    </button>
-                </div>
-            </form>
-        </div>
-    `;
-
-        document.body.appendChild(modal);
-
-        cargarEmpleadosContrato();
-
-        const cerrar = () => modal.remove();
-
-        document.getElementById("cerrar-modal-contrato")
-            .addEventListener("click", cerrar);
-
-        document.getElementById("cancelar-contrato")
-            .addEventListener("click", cerrar);
-
-        const selector = document.getElementById("contrato-reserva");
-
-        const totalEstimado = document.getElementById(
-            "contrato-total-estimado"
-        );
-
-        const formatoMoneda = new Intl.NumberFormat("es-DO", {
-            style: "currency",
-            currency: "DOP"
-        });
-
-        selector.addEventListener("change", () => {
-            const opcion = selector.options[selector.selectedIndex];
-
-            const total = opcion?.dataset.total;
-
-            totalEstimado.value =
-                total !== undefined && total !== ""
-                    ? formatoMoneda.format(Number(total))
-                    : "";
-        });
-
-        try {
-            const [reservas, clientes, vehiculos] = await Promise.all([
-                window.reservasAPI.obtenerTodas(),
-                window.clientesAPI.obtenerTodos(),
-                window.vehiculosAPI.obtenerTodos()
-            ]);
-
-            const clientesPorId = new Map(
-                clientes.map(cliente => [Number(cliente.id), cliente])
-            );
-
-            const vehiculosPorId = new Map(
-                vehiculos.map(vehiculo => [Number(vehiculo.id), vehiculo])
-            );
-
-            if (!modal.isConnected) return;
-
-            const confirmadas = reservas.filter(
-                reserva => reserva.estado === "CONFIRMADA"
-            );
-
-            selector.innerHTML = '<option value="">Selecciona una reserva</option>';
-
-            confirmadas.forEach(reserva => {
-                const cliente = clientesPorId.get(Number(reserva.clienteId));
-                const vehiculo = vehiculosPorId.get(Number(reserva.vehiculoId));
-
-                const nombreCliente = cliente
-                    ? [cliente.nombre, cliente.apellido]
-                        .filter(Boolean)
-                        .join(" ")
-                    : `Cliente ${reserva.clienteId}`;
-
-                const nombreVehiculo = vehiculo
-                    ? [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
-                        .filter(Boolean)
-                        .join(" ")
-                    : `Vehículo ${reserva.vehiculoId}`;
-
-                const opcion = document.createElement("option");
-
-                opcion.value = reserva.id;
-                opcion.dataset.total = reserva.total ?? "";
-
-                opcion.textContent =
-                    `${formatearCodigo("RES", reserva.id)} — ` +
-                    `${nombreCliente} — ${nombreVehiculo}`;
-
-                selector.appendChild(opcion);
-            });
-
-            if (confirmadas.length === 0) {
-                selector.innerHTML =
-                    '<option value="">No hay reservas confirmadas</option>';
-                selector.disabled = true;
-            }
-        } catch (error) {
-            selector.innerHTML =
-                '<option value="">Error al cargar reservas</option>';
-            selector.disabled = true;
-            alert(`No se pudieron cargar las reservas: ${error.message}`);
-        }
-
-        if (window.lucide) window.lucide.createIcons();
-
-        document.getElementById("form-nuevo-contrato")
-            .addEventListener("submit", async (evento) => {
-                evento.preventDefault();
-
-                const reservaId = Number(selector.value);
-                const empleadoId = Number(
-                    document.getElementById("contrato-empleado").value
-                );
-                const montoGarantia = Number(
-                    document.getElementById("contrato-garantia").value
-                );
-
-                if (!Number.isSafeInteger(reservaId) || reservaId < 1 ||
-                    !Number.isSafeInteger(empleadoId) || empleadoId < 1 ||
-                    !Number.isFinite(montoGarantia) || montoGarantia < 0) {
-                    alert("Verifica los datos del contrato.");
-                    return;
-                }
-
-                const boton = document.getElementById("guardar-contrato");
-                boton.disabled = true;
-                boton.textContent = "Generando contrato...";
-
-                try {
-                    const contrato = await window.contratosAPI.crear({
-                        reservaId,
-                        empleadoId,
-                        montoGarantia
-                    });
-
-                    contratosConsultados.set(Number(contrato.id), contrato);
-                    renderizarContratosConsultados();
-
-                    cerrar();
-
-                    mostrarModalExito(
-                        "¡Contrato generado!",
-                        "El contrato de alquiler se ha generado correctamente.",
-                        formatearCodigo("CON", contrato.id)
-                    );
-
-                } catch (error) {
-                    alert(`No se pudo generar el contrato: ${error.message}`);
-                } finally {
-                    if (boton.isConnected) {
-                        boton.disabled = false;
-                        boton.textContent = "Generar contrato";
-                    }
-                }
-                        });
-    }
-
-    async function cargarDashboard() {
-        const estadoConexion = document.getElementById("api-status");
-
-        try {
-            const [sucursales, vehiculos, reservas, facturas] = await Promise.all([
-                window.sucursalesAPI.obtenerTodas(),
-                window.vehiculosAPI.obtenerTodos(),
-                window.reservasAPI.obtenerTodas(),
-                window.facturasAPI.obtenerTodas()
-            ]);
-
-            const disponibles = vehiculos.filter(
-                vehiculo => String(vehiculo.estado || "").toUpperCase() === "DISPONIBLE"
-            ).length;
-
-            const fijar = (id, valor) => {
-                const elemento = document.getElementById(id);
-                if (elemento) elemento.textContent = valor;
-            };
-
-            fijar("total-disponibles", disponibles);
-            fijar("total-vehiculos", vehiculos.length);
-            fijar("total-reservas", reservas.length);
-            fijar("total-sucursales", sucursales.length);
-            fijar("total-facturas", facturas.length);
-
-            if (estadoConexion) {
-                estadoConexion.textContent = "Datos conectados";
-                estadoConexion.classList.add("is-connected");
-            }
-
-            const notaFlota = document.getElementById("dashboard-fleet-note");
-
-            if (notaFlota) {
-                notaFlota.textContent = vehiculos.length
-                    ? `${disponibles} de ${vehiculos.length} disponibles`
-                    : "Sin vehículos registrados";
-            }
-
-            renderizarFlotaDashboard(vehiculos, sucursales);
-            renderizarReservasDashboard(reservas);
-
-        } catch (error) {
-            console.error("Error al cargar el dashboard:", error);
-
-            if (estadoConexion) {
-                estadoConexion.textContent = "Sin conexión con la API";
-                estadoConexion.classList.remove("is-connected");
-            }
-        }
-    }
-
-    function renderizarFlotaDashboard(vehiculos, sucursales) {
-        const cuerpo = document.getElementById("fleet-table-body");
-        if (!cuerpo) return;
-
-        const nombresSucursales = new Map(
-            sucursales.map(sucursal => [sucursal.id, sucursal.nombre])
-        );
-
-        cuerpo.replaceChildren();
-
-        if (!vehiculos.length) {
-            const fila = cuerpo.insertRow();
-            const celda = fila.insertCell();
-            celda.colSpan = 4;
-            celda.className = "empty-table";
-            celda.textContent = "No hay vehículos registrados.";
-            return;
-        }
-
-        vehiculos.slice(0, 6).forEach(vehiculo => {
-            const fila = cuerpo.insertRow();
-
-            const celdaVehiculo = fila.insertCell();
-            celdaVehiculo.textContent = [vehiculo.marca, vehiculo.modelo, vehiculo.anio]
-                .filter(Boolean)
-                .join(" ") || "—";
-
-            const celdaPlaca = fila.insertCell();
-            celdaPlaca.textContent = vehiculo.placa || "—";
-
-            const celdaSucursal = fila.insertCell();
-            celdaSucursal.textContent = nombresSucursales.get(vehiculo.sucursalId)
-                ?? `Sucursal #${vehiculo.sucursalId}`;
-
-            const celdaEstado = fila.insertCell();
-            celdaEstado.appendChild(crearBadgeEstadoVehiculo(vehiculo.estado));
-        });
-    }
-
-    function renderizarReservasDashboard(reservas) {
-        const contenedor = document.getElementById("dashboard-reservas");
-        if (!contenedor) return;
-
-        if (!reservas.length) {
-            contenedor.innerHTML = `
-                <div class="empty-state">
-                    <div class="empty-state-icon" aria-hidden="true">▤</div>
-                    <h3>Sin reservas registradas</h3>
-                    <p>Registra una nueva reserva para comenzar.</p>
-                    <a href="#reservas" class="btn btn-outline">Ir a reservas</a>
-                </div>
-            `;
-            return;
-        }
-
-        const confirmadas = reservas.filter(reserva => reserva.estado === "CONFIRMADA").length;
-        const convertidas = reservas.filter(reserva => reserva.estado === "CONVERTIDA").length;
-
-        contenedor.innerHTML = `
-            <div class="empty-state">
-                <div class="empty-state-icon" aria-hidden="true">▤</div>
-                <h3>${reservas.length} reservas registradas</h3>
-                <p>${confirmadas} confirmadas · ${convertidas} convertidas.</p>
-                <a href="#reservas" class="btn btn-outline">Ver reservas</a>
-            </div>
-        `;
-    }
-
     async function mostrarReservas() {
         contenido.innerHTML = `
         <section class="page-header">
@@ -1139,35 +124,37 @@ document.addEventListener("DOMContentLoaded", () => {
         </section>
 
         <section class="reservas-stats">
-            <div class="reserva-stat-card">
-                <div class="reserva-stat-icon">
-                    <i data-lucide="calendar-days"></i>
-                </div>
-                <div>
-                    <span>Total de reservas</span>
-                    <strong id="reservas-total">—</strong>
-                </div>
-            </div>
 
-            <div class="reserva-stat-card">
+            <article class="reserva-stat-card">
                 <div class="reserva-stat-icon">
-                    <i data-lucide="check-circle"></i>
+                    <i data-lucide="file-text"></i>
                 </div>
                 <div>
-                    <span>Confirmadas</span>
-                    <strong id="reservas-confirmadas">—</strong>
+                    <span>Contrato consultado</span>
+                    <strong id="inspeccion-contrato">—</strong>
                 </div>
-            </div>
+            </article>
 
-            <div class="reserva-stat-card">
+            <article class="reserva-stat-card">
                 <div class="reserva-stat-icon">
-                    <i data-lucide="repeat"></i>
+                    <i data-lucide="clipboard-list"></i>
                 </div>
                 <div>
-                    <span>Convertidas</span>
-                    <strong id="reservas-convertidas">—</strong>
+                    <span>Inspecciones registradas</span>
+                    <strong id="inspeccion-total">0</strong>
                 </div>
-            </div>
+            </article>
+
+            <article class="reserva-stat-card">
+                <div class="reserva-stat-icon">
+                    <i data-lucide="clipboard-check"></i>
+                </div>
+                <div>
+                    <span>Estado del proceso</span>
+                    <strong id="inspeccion-estado">Pendiente</strong>
+                </div>
+            </article>
+
         </section>
 
         <div class="reservas-section-heading">
@@ -1215,7 +202,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     <tbody id="reservas-table-body">
                         <tr>
-                            <td colspan="8">
+                            <td colspan="7">
                                 <div class="reservas-empty">
                                     <i data-lucide="calendar-search"></i>
                                     <h3>Listado pendiente de conexión</h3>
@@ -1308,18 +295,18 @@ document.addEventListener("DOMContentLoaded", () => {
                 reserva => reserva.estado === "CONFIRMADA"
             ).length;
 
-            const convertidas = reservas.filter(
-                reserva => reserva.estado === "CONVERTIDA"
+            const pendientes = reservas.filter(
+                reserva => reserva.estado === "PENDIENTE"
             ).length;
 
             document.getElementById("reservas-total").textContent = total;
             document.getElementById("reservas-confirmadas").textContent = confirmadas;
-            document.getElementById("reservas-convertidas").textContent = convertidas;
+            document.getElementById("reservas-pendientes").textContent = pendientes;
 
             if (total === 0) {
                 tbody.innerHTML = `
                 <tr>
-                    <td colspan="8">
+                    <td colspan="7">
                         <div class="reservas-empty">
                             <h3>No hay reservas registradas</h3>
                             <p>Registra una nueva reserva para comenzar.</p>
@@ -1907,15 +894,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
                     cerrar();
 
-                    mostrarModalExito(
-                        "¡Reserva registrada!",
-                        "La reserva se ha registrado correctamente en el sistema.",
-                        formatearCodigo("RES", reserva.id)
-                    );
-
-                    if (location.hash === "#reservas") {
-                        await mostrarReservas();
-                    }
+                    alert(`Reserva #${reserva.id} registrada correctamente.`);
                 } catch (error) {
                     mensaje.textContent =
                         error.message || "No se pudo registrar la reserva.";
@@ -2235,18 +1214,9 @@ document.addEventListener("DOMContentLoaded", () => {
         mensaje.textContent = "Guardando cliente...";
 
         try {
-            const clienteRegistrado =
-                await window.clientesAPI.registrar(cliente);
+            await window.clientesAPI.registrar(cliente);
 
             cerrar();
-
-            mostrarModalExito(
-                "¡Cliente registrado!",
-                "El cliente se ha registrado correctamente en el sistema.",
-                clienteRegistrado?.id != null
-                    ? formatearCodigo("CLI", clienteRegistrado.id)
-                    : ""
-            );
 
             if (window.location.hash === "#clientes") {
                 await mostrarClientes();
@@ -2385,7 +1355,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (!licencias.length) {
             const fila = document.createElement("tr");
             const celda = document.createElement("td");
-            celda.colSpan = 5;
+            celda.colSpan = 4;
             celda.textContent =
                 "Este cliente todavía no tiene licencias registradas.";
             fila.appendChild(celda);
@@ -2506,7 +1476,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             </label>
                             <input id="editar-licencia-numero"
                                    type="text"
-                                   maxlength="30"
                                    required>
                         </div>
 
@@ -2515,8 +1484,7 @@ document.addEventListener("DOMContentLoaded", () => {
                                 Categoría
                             </label>
                             <input id="editar-licencia-categoria"
-                                   type="text"
-                                   maxlength="10">
+                                   type="text">
                         </div>
 
                         <div class="client-form-field client-form-full">
@@ -2666,7 +1634,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             <input id="licencia-numero"
                                    name="numero"
                                    type="text"
-                                   maxlength="30"
                                    required>
                         </div>
 
@@ -2677,7 +1644,6 @@ document.addEventListener("DOMContentLoaded", () => {
                             <input id="licencia-categoria"
                                    name="categoria"
                                    type="text"
-                                   maxlength="10"
                             >
                         </div>
 
@@ -2779,20 +1745,10 @@ document.addEventListener("DOMContentLoaded", () => {
         mensaje.textContent = "Guardando licencia...";
 
         try {
-            const licenciaRegistrada =
-                await window.clientesAPI.registrarLicencia(licencia);
+            await window.clientesAPI.registrarLicencia(licencia);
 
             cerrar();
-
             await abrirModalLicencias(cliente);
-
-            mostrarModalExito(
-                "¡Licencia registrada!",
-                "La licencia de conducir se ha asociado correctamente al cliente.",
-                licenciaRegistrada?.id != null
-                    ? formatearCodigo("LIC", licenciaRegistrada.id)
-                    : ""
-            );
 
         } catch (error) {
             console.error("Error al registrar licencia:", error);
@@ -2824,12 +1780,13 @@ document.addEventListener("DOMContentLoaded", () => {
         const fila = document.createElement("tr");
 
         const valores = [
-            formatearCodigo("CLI", cliente.id),
+            cliente.id,
             `${cliente.nombre || ""} ${cliente.apellido || ""}`.trim(),
             cliente.documento || "—",
             cliente.telefono || "—",
             cliente.email || "—"
         ];
+
         valores.forEach(valor => {
             const celda = document.createElement("td");
             celda.textContent = valor ?? "—";
@@ -3147,18 +2104,9 @@ document.addEventListener("DOMContentLoaded", () => {
             mensaje.textContent = "";
 
             try {
-                const sucursalRegistrada =
-                    await window.sucursalesAPI.crear(sucursal);
+                await window.sucursalesAPI.crear(sucursal);
 
                 cerrar();
-
-                mostrarModalExito(
-                    "¡Sucursal registrada!",
-                    "La sucursal se ha registrado correctamente en el sistema.",
-                    sucursalRegistrada?.id != null
-                        ? formatearCodigo("SUC", sucursalRegistrada.id)
-                        : ""
-                );
 
                 if (location.hash === "#sucursales") {
                     await mostrarSucursales();
@@ -3200,7 +2148,7 @@ document.addEventListener("DOMContentLoaded", () => {
             const fila = document.createElement("tr");
 
             const datos = [
-                formatearCodigo("SUC", sucursal.id),
+                sucursal.id,
                 sucursal.nombre,
                 sucursal.direccion,
                 sucursal.telefono
@@ -3292,7 +2240,7 @@ document.addEventListener("DOMContentLoaded", () => {
         contenido.innerHTML = `
         <section class="page-header">
             <div>
-                <h1>Gestión de vehículos</h1>
+                <h1>Gestión de vehiculos</h1>
                 <p class="page-description">
                     Consulta y administración de toda la flota de vehículos.
                 </p>
@@ -3360,7 +2308,7 @@ document.addEventListener("DOMContentLoaded", () => {
                             <th>Sucursal</th>
                             <th>Kilometraje</th>
                             <th>Estado</th>
-                            <th>Acciones</th>
+                            <th>Estado</th>
                         </tr>
                     </thead>
 
@@ -3500,38 +2448,11 @@ document.addEventListener("DOMContentLoaded", () => {
 
                 const fila = cuerpoTabla.insertRow();
                 const celda = fila.insertCell();
-                celda.colSpan = 9;
+                celda.colSpan = 8;
                 celda.textContent =
                     "No se pudieron cargar los vehículos. Verifica la conexión con el servidor.";
             }
         }
-    }
-
-    function claseEstadoVehiculo(estado) {
-        switch (String(estado ?? "").toUpperCase()) {
-            case "DISPONIBLE": return "active";
-            case "ALQUILADO": return "info";
-            case "EN_MANTENIMIENTO": return "warning";
-            case "AVERIADO": return "danger";
-            default: return "inactive";
-        }
-    }
-
-    function etiquetaEstadoVehiculo(estado) {
-        switch (String(estado ?? "").toUpperCase()) {
-            case "DISPONIBLE": return "Disponible";
-            case "ALQUILADO": return "Alquilado";
-            case "EN_MANTENIMIENTO": return "En mantenimiento";
-            case "AVERIADO": return "Averiado";
-            default: return (estado ?? "DESCONOCIDO").replaceAll("_", " ");
-        }
-    }
-
-    function crearBadgeEstadoVehiculo(estado) {
-        const span = document.createElement("span");
-        span.className = "branch-status " + claseEstadoVehiculo(estado);
-        span.textContent = etiquetaEstadoVehiculo(estado);
-        return span;
     }
 
     function renderizarVehiculos(vehiculos, cuerpoTabla, nombresSucursales) {
@@ -3552,24 +2473,15 @@ document.addEventListener("DOMContentLoaded", () => {
             const fila = cuerpoTabla.insertRow();
 
             const valores = [
-                formatearCodigo("VEH", vehiculo.id),
+                vehiculo.id,
                 vehiculo.placa,
                 vehiculo.marca,
                 vehiculo.modelo,
                 vehiculo.anio,
                 nombresSucursales.get(vehiculo.sucursalId)
-                ?? formatearCodigo("SUC", vehiculo.sucursalId),
+                ?? `Sucursal #${vehiculo.sucursalId}`,
                 vehiculo.kilometraje
             ];
-
-            valores.forEach((valor, indice) => {
-                const celda = fila.insertCell();
-                celda.textContent = valor ?? "—";
-
-                if (indice === 0) {
-                    celda.classList.add("registro-codigo");
-                }
-            });
 
             valores.forEach(valor => {
                 const celda = fila.insertCell();
@@ -3577,7 +2489,14 @@ document.addEventListener("DOMContentLoaded", () => {
             });
 
             const celdaEstado = fila.insertCell();
-            celdaEstado.appendChild(crearBadgeEstadoVehiculo(vehiculo.estado));
+            const estado = document.createElement("span");
+
+            estado.className = "branch-status active";
+            estado.textContent =
+                (vehiculo.estado ?? "DESCONOCIDO")
+                    .replaceAll("_", " ");
+
+            celdaEstado.appendChild(estado);
 
             const celdaAcciones = fila.insertCell();
             const botonEstado = document.createElement("button");
@@ -3917,18 +2836,9 @@ document.addEventListener("DOMContentLoaded", () => {
             mensaje.textContent = "";
 
             try {
-                const vehiculoRegistrado =
-                    await window.vehiculosAPI.registrar(vehiculo);
+                await window.vehiculosAPI.registrar(vehiculo);
 
                 cerrar();
-
-                mostrarModalExito(
-                    "¡Vehículo registrado!",
-                    "El vehículo se ha registrado correctamente en la flota.",
-                    vehiculoRegistrado?.id != null
-                        ? formatearCodigo("VEH", vehiculoRegistrado.id)
-                        : ""
-                );
 
                 if (location.hash === "#vehiculos") {
                     await mostrarVehiculos();
@@ -3950,5 +2860,496 @@ document.addEventListener("DOMContentLoaded", () => {
             }
         });
     }
-});
 
+
+    async function mostrarInspecciones() {
+        contenido.innerHTML = `
+        <section class="reservas-stats">
+            <article class="reserva-stat-card">
+                <span>Contrato consultado</span>
+                <strong id="inspeccion-contrato">—</strong>
+            </article>
+
+            <article class="reserva-stat-card">
+                <span>Inspecciones registradas</span>
+                <strong id="inspeccion-total">0</strong>
+            </article>
+
+            <article class="reserva-stat-card">
+                <span>Estado del proceso</span>
+                <strong id="inspeccion-estado">Pendiente</strong>
+            </article>
+        </section>
+
+        <section class="content-panel inspecciones-panel">
+            <div class="reservas-section-heading">
+                <div>
+                    <h2>Inspecciones de vehículos</h2>
+                    <p>Consulta el estado de un vehículo antes y después de cada alquiler.</p>
+                </div>
+            </div>
+
+            <div class="inspeccion-buscador">
+                <div>
+                    <label for="inspeccion-contrato-id">Número de contrato</label>
+                    <input
+                        type="number"
+                        id="inspeccion-contrato-id"
+                        min="1"
+                        placeholder="Introduce el ID del contrato"
+                    >
+                </div>
+
+                <button type="button" id="buscar-inspeccion">
+                    <i data-lucide="search"></i>
+                    Buscar contrato
+                </button>
+            </div>
+
+            <div id="inspeccion-mensaje" class="reservas-empty inspeccion-mensaje">
+                <i data-lucide="clipboard-search"></i>
+                <h3>Consulta un contrato</h3>
+                <p>Introduce el número de contrato para consultar su historial de inspecciones.</p>
+            </div>
+
+            <div id="inspeccion-historial" hidden>
+                <div class="reservas-section-heading">
+                    <div>
+                        <h3>Historial de inspecciones</h3>
+                        <p>Registros de salida y entrada del vehículo.</p>
+                    </div>
+
+                    <button type="button" id="nueva-inspeccion">
+                        <i data-lucide="plus"></i>
+                        Registrar inspección
+                    </button>
+                </div>
+
+                <div class="branches-table-container">
+                    <table class="branches-table">
+                        <thead>
+                            <tr>
+                                <th>Código</th>
+                                <th>Tipo</th>
+                                <th>Kilometraje</th>
+                                <th>Combustible</th>
+                                <th>Observaciones</th>
+                                <th>Fecha</th>
+                            </tr>
+                        </thead>
+                        <tbody id="inspeccion-tabla"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    `;
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+
+        const campoContrato = document.getElementById("inspeccion-contrato-id");
+        const botonBuscar = document.getElementById("buscar-inspeccion");
+        const mensaje = document.getElementById("inspeccion-mensaje");
+        const historial = document.getElementById("inspeccion-historial");
+        const tabla = document.getElementById("inspeccion-tabla");
+
+        let contratoActual = null;
+        let inspeccionesActuales = [];
+
+        function actualizarIconos() {
+            if (window.lucide) {
+                window.lucide.createIcons();
+            }
+        }
+
+        function mostrarMensaje(titulo, descripcion) {
+            mensaje.hidden = false;
+            mensaje.innerHTML = `
+            <i data-lucide="clipboard-list"></i>
+            <h3>${titulo}</h3>
+            <p>${descripcion}</p>
+        `;
+            actualizarIconos();
+        }
+
+        function escaparHTML(valor) {
+            return String(valor ?? "").replace(/[&<>"']/g, caracter => ({
+                "&": "&amp;",
+                "<": "&lt;",
+                ">": "&gt;",
+                '"': "&quot;",
+                "'": "&#039;"
+            })[caracter]);
+        }
+
+        function formatearCodigoInspeccion(id) {
+            return `INS-${String(id).padStart(6, "0")}`;
+        }
+
+        function renderizarHistorial() {
+            tabla.innerHTML = "";
+
+            if (!inspeccionesActuales.length) {
+                tabla.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        Todavía no hay inspecciones registradas para este contrato.
+                    </td>
+                </tr>
+            `;
+            } else {
+                tabla.innerHTML = inspeccionesActuales.map(inspeccion => {
+                    const fecha = inspeccion.fecha
+                        ? new Date(inspeccion.fecha).toLocaleString("es-DO")
+                        : "—";
+
+                    return `
+                    <tr>
+                        <td>${escaparHTML(formatearCodigoInspeccion(inspeccion.id))}</td>
+                        <td>${escaparHTML(inspeccion.tipo)}</td>
+                        <td>${escaparHTML(inspeccion.kilometraje)} km</td>
+                        <td>${escaparHTML(inspeccion.combustible)}</td>
+                        <td>${escaparHTML(inspeccion.observaciones || "Sin observaciones")}</td>
+                        <td>${escaparHTML(fecha)}</td>
+                    </tr>
+                `;
+                }).join("");
+            }
+
+            document.getElementById("inspeccion-contrato").textContent =
+                contratoActual.id;
+
+            document.getElementById("inspeccion-total").textContent =
+                inspeccionesActuales.length;
+
+            const tieneSalida = inspeccionesActuales.some(i => i.tipo === "SALIDA");
+            const tieneEntrada = inspeccionesActuales.some(i => i.tipo === "ENTRADA");
+
+            document.getElementById("inspeccion-estado").textContent =
+                tieneEntrada ? "Completado" :
+                    tieneSalida ? "En alquiler" : "Sin iniciar";
+
+            mensaje.hidden = true;
+            historial.hidden = false;
+        }
+
+        async function buscarContrato() {
+            const id = Number(campoContrato.value);
+
+            if (!Number.isSafeInteger(id) || id <= 0) {
+                mostrarMensaje(
+                    "Número de contrato inválido",
+                    "Introduce un ID de contrato válido."
+                );
+                return;
+            }
+
+            botonBuscar.disabled = true;
+            botonBuscar.textContent = "Buscando...";
+
+            try {
+                contratoActual = await window.contratosAPI.obtenerPorId(id);
+
+                inspeccionesActuales =
+                    await window.inspeccionesAPI.obtenerPorContrato(id);
+
+                renderizarHistorial();
+
+            } catch (error) {
+                console.error("Error al consultar inspecciones:", error);
+
+                contratoActual = null;
+                inspeccionesActuales = [];
+                historial.hidden = true;
+
+                mostrarMensaje(
+                    "No se pudo consultar el contrato",
+                    error.message || "Verifica el número e inténtalo nuevamente."
+                );
+
+            } finally {
+                botonBuscar.disabled = false;
+                botonBuscar.innerHTML = `
+                <i data-lucide="search"></i>
+                Buscar contrato
+            `;
+                actualizarIconos();
+            }
+        }
+
+        botonBuscar.addEventListener("click", buscarContrato);
+
+        campoContrato.addEventListener("keydown", evento => {
+            if (evento.key === "Enter") {
+                buscarContrato();
+            }
+        });
+
+        async function abrirModalInspeccion() {
+            if (!contratoActual) return;
+
+            const tieneSalida = inspeccionesActuales.some(
+                inspeccion => inspeccion.tipo === "SALIDA"
+            );
+
+            const tieneEntrada = inspeccionesActuales.some(
+                inspeccion => inspeccion.tipo === "ENTRADA"
+            );
+
+            let tipoPermitido = "";
+
+            if (!tieneSalida) {
+                tipoPermitido = "SALIDA";
+            } else if (!tieneEntrada) {
+                tipoPermitido = "ENTRADA";
+            } else {
+                alert("Este contrato ya tiene sus inspecciones de salida y entrada.");
+                return;
+            }
+
+            const inspeccionSalida = inspeccionesActuales.find(
+                inspeccion => inspeccion.tipo === "SALIDA"
+            );
+
+            const modal = document.createElement("div");
+            modal.className = "client-modal-overlay inspeccion-modal-overlay";
+
+            modal.innerHTML = `
+            <div class="client-modal reserva-modal inspeccion-modal">
+                <div class="client-modal-header">
+                    <div>
+                        <h2>Registrar inspección</h2>
+                        <p>Contrato #${escaparHTML(contratoActual.id)}</p>
+                    </div>
+
+                    <button type="button" class="modal-close" id="cerrar-inspeccion">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+
+                <form id="form-inspeccion">
+                    <div class="form-group">
+                        <label>Tipo de inspección</label>
+                        <input type="text" value="${tipoPermitido}" readonly>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-empleado">Empleado responsable</label>
+                        <select id="inspeccion-empleado" name="empleadoId" required>
+                            <option value="">Cargando empleados...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-kilometraje">Kilometraje actual</label>
+                        <input
+                            type="number"
+                            id="inspeccion-kilometraje"
+                            name="kilometraje"
+                            min="0"
+                            step="1"
+                            required
+                            placeholder="Ej. 45000"
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-combustible">Nivel de combustible</label>
+                        <select
+                            id="inspeccion-combustible"
+                            name="nivelCombustible"
+                            required
+                        >
+                            <option value="">Seleccionar nivel</option>
+                            <option value="LLENO">Lleno</option>
+                            <option value="3/4">3/4</option>
+                            <option value="1/2">1/2</option>
+                            <option value="1/4">1/4</option>
+                            <option value="RESERVA">Reserva</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-observaciones">Observaciones</label>
+                        <textarea
+                            id="inspeccion-observaciones"
+                            name="observaciones"
+                            rows="4"
+                            placeholder="Describe el estado del vehículo, daños o detalles importantes..."
+                        ></textarea>
+                    </div>
+
+                    <p id="inspeccion-form-mensaje" role="alert"></p>
+
+                    <div class="modal-actions">
+                        <button type="button" class="btn-secondary" id="cancelar-inspeccion">
+                            Cancelar
+                        </button>
+
+                        <button type="submit" id="guardar-inspeccion" disabled>
+                            Guardar inspección
+                        </button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+            document.body.appendChild(modal);
+            actualizarIconos();
+
+            const formulario = modal.querySelector("#form-inspeccion");
+            const selectorEmpleado = modal.querySelector("#inspeccion-empleado");
+            const campoKilometraje = modal.querySelector("#inspeccion-kilometraje");
+            const mensajeFormulario = modal.querySelector("#inspeccion-form-mensaje");
+            const botonGuardar = modal.querySelector("#guardar-inspeccion");
+
+            function cerrarModal() {
+                modal.remove();
+                document.removeEventListener("keydown", manejarEscape);
+            }
+
+            function manejarEscape(evento) {
+                if (evento.key === "Escape") {
+                    cerrarModal();
+                }
+            }
+
+            modal.querySelector("#cerrar-inspeccion")
+                .addEventListener("click", cerrarModal);
+
+            modal.querySelector("#cancelar-inspeccion")
+                .addEventListener("click", cerrarModal);
+
+            modal.addEventListener("click", evento => {
+                if (evento.target === modal) {
+                    cerrarModal();
+                }
+            });
+
+            document.addEventListener("keydown", manejarEscape);
+
+            if (tipoPermitido === "ENTRADA" && inspeccionSalida) {
+                campoKilometraje.min = inspeccionSalida.kilometraje;
+
+                campoKilometraje.placeholder =
+                    `Mínimo ${inspeccionSalida.kilometraje} km`;
+            }
+
+            try {
+                const empleados = await window.empleadosAPI.obtenerTodos();
+
+                if (!modal.isConnected) return;
+
+                const empleadosActivos = empleados.filter(
+                    empleado => empleado.activo === true
+                );
+
+                selectorEmpleado.replaceChildren();
+
+                const opcionInicial = document.createElement("option");
+                opcionInicial.value = "";
+                opcionInicial.textContent = "Seleccionar empleado";
+                selectorEmpleado.appendChild(opcionInicial);
+
+                empleadosActivos.forEach(empleado => {
+                    const opcion = document.createElement("option");
+                    opcion.value = empleado.id;
+                    opcion.textContent =
+                        `${empleado.nombre} — ${empleado.rol || "Empleado"}`;
+
+                    selectorEmpleado.appendChild(opcion);
+                });
+
+                if (empleadosActivos.length === 0) {
+                    mensajeFormulario.textContent =
+                        "No hay empleados activos disponibles.";
+                } else {
+                    botonGuardar.disabled = false;
+                }
+
+            } catch (error) {
+                console.error("Error al cargar empleados:", error);
+
+                mensajeFormulario.textContent =
+                    "No se pudieron cargar los empleados. Intenta nuevamente.";
+            }
+
+            formulario.addEventListener("submit", async evento => {
+                evento.preventDefault();
+
+                const kilometraje = Number(campoKilometraje.value);
+
+                const datos = {
+                    contratoId: Number(contratoActual.id),
+                    empleadoId: Number(selectorEmpleado.value),
+                    tipo: tipoPermitido,
+                    kilometraje,
+                    nivelCombustible: modal.querySelector(
+                        "#inspeccion-combustible"
+                    ).value,
+                    observaciones: modal.querySelector(
+                        "#inspeccion-observaciones"
+                    ).value.trim()
+                };
+
+                if (
+                    !datos.empleadoId ||
+                    !Number.isSafeInteger(kilometraje) ||
+                    kilometraje < 0 ||
+                    !datos.nivelCombustible
+                ) {
+                    mensajeFormulario.textContent =
+                        "Verifica los campos obligatorios.";
+                    return;
+                }
+
+                if (
+                    tipoPermitido === "ENTRADA" &&
+                    inspeccionSalida &&
+                    kilometraje < inspeccionSalida.kilometraje
+                ) {
+                    mensajeFormulario.textContent =
+                        "El kilometraje de entrada no puede ser inferior al de salida.";
+                    return;
+                }
+
+                botonGuardar.disabled = true;
+                botonGuardar.textContent = "Guardando...";
+                mensajeFormulario.textContent = "";
+
+                try {
+                    const resultado =
+                        await window.inspeccionesAPI.registrar(datos);
+
+                    cerrarModal();
+
+                    mostrarModalExito(
+                        "¡Inspección registrada!",
+                        `La inspección de ${tipoPermitido.toLowerCase()} se registró correctamente.`,
+                        resultado?.id
+                            ? formatearCodigoInspeccion(resultado.id)
+                            : ""
+                    );
+
+                    await buscarContrato();
+
+                } catch (error) {
+                    console.error("Error al registrar inspección:", error);
+
+                    mensajeFormulario.textContent =
+                        error.message || "No se pudo registrar la inspección.";
+
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Guardar inspección";
+                }
+            });
+        }
+
+        document.getElementById("nueva-inspeccion")
+            .addEventListener("click", abrirModalInspeccion);
+
+        actualizarIconos();
+    }
+
+});

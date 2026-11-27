@@ -5079,6 +5079,69 @@ document.addEventListener("DOMContentLoaded", () => {
     window.addEventListener("hashchange", navegar);
     navegar();
 
+    // --- Login falso (solo frontend; sin backend ni JWT) ---
+    const AUTH_KEY = "rentcar-auth";
+    const LOGIN_USUARIO = "admin";
+    const LOGIN_PASSWORD = "admin";
+
+    function estaAutenticado() {
+        return sessionStorage.getItem(AUTH_KEY) === "true";
+    }
+
+    function mostrarLogin() {
+        const overlay = document.getElementById("login-overlay");
+        if (overlay) overlay.hidden = false;
+        document.querySelector(".app-container")?.setAttribute("aria-hidden", "true");
+        document.getElementById("login-usuario")?.focus();
+    }
+
+    function ocultarLogin() {
+        const overlay = document.getElementById("login-overlay");
+        if (overlay) overlay.hidden = true;
+        document.querySelector(".app-container")?.removeAttribute("aria-hidden");
+    }
+
+    const formLogin = document.getElementById("form-login");
+
+    formLogin?.addEventListener("submit", evento => {
+        evento.preventDefault();
+
+        const usuario = document.getElementById("login-usuario").value.trim();
+        const password = document.getElementById("login-password").value;
+        const mensaje = document.getElementById("login-mensaje");
+
+        if (usuario === LOGIN_USUARIO && password === LOGIN_PASSWORD) {
+            sessionStorage.setItem(AUTH_KEY, "true");
+            mensaje.textContent = "";
+            formLogin.reset();
+            ocultarLogin();
+            navegar();
+        } else {
+            mensaje.textContent = "Usuario o contraseña incorrectos.";
+            sessionStorage.removeItem(AUTH_KEY);
+        }
+    });
+
+    document.getElementById("cerrar-sesion")?.addEventListener("click", () => {
+        sessionStorage.removeItem(AUTH_KEY);
+
+        document
+            .querySelectorAll(".modal-overlay, .client-modal-overlay, .exito-modal-overlay")
+            .forEach(elemento => elemento.remove());
+
+        if (location.hash !== "#dashboard") {
+            location.hash = "#dashboard";
+        }
+
+        mostrarLogin();
+    });
+
+    if (estaAutenticado()) {
+        ocultarLogin();
+    } else {
+        mostrarLogin();
+    }
+
     if (window.lucide) {
        window.lucide.createIcons();
     }

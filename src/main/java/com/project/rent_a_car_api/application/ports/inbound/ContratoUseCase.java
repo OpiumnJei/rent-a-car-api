@@ -4,6 +4,7 @@ import com.project.rent_a_car_api.domain.model.Contrato;
 import com.project.rent_a_car_api.domain.result.Result;
 
 import java.math.BigDecimal;
+import java.util.List;
 
 /**
  * Caso de uso de contratos (RF-04).
@@ -14,4 +15,6 @@ public interface ContratoUseCase {
     Result<Contrato> generar(Long reservaId, Long empleadoId, BigDecimal montoGarantia);
 
     Result<Contrato> buscarPorId(Long id);
+
+    Result<List<Contrato>> listarTodas();
 }

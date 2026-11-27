@@ -155,6 +155,10 @@ document.addEventListener("DOMContentLoaded", () => {
             titulo: "Sucursales",
             descripcion: "Gestión de los puntos de operación."
         },
+        "tipos-tarifas": {
+            titulo: "Tipos de vehículo y tarifas",
+            descripcion: "Catálogo de tipos de vehículo y sus tarifas."
+        },
         empleados: {
             titulo: "Empleados",
             descripcion: "Administración del personal."
@@ -191,6 +195,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
         if (nombre === "contratos") {
             mostrarContratos();
+            return;
+        }
+        if (nombre === "inspecciones") {
+            mostrarInspecciones();
+            return;
+        }
+        if (nombre === "facturacion") {
+            mostrarFacturacion();
+            return;
+        }
+        if (nombre === "empleados") {
+            mostrarEmpleados();
+            return;
+        }
+        if (nombre === "tipos-tarifas") {
+            mostrarTiposTarifas();
             return;
         }
 
@@ -336,7 +356,7 @@ document.addEventListener("DOMContentLoaded", () => {
         </section>
     `;
 
-    renderizarContratosConsultados();
+    cargarTodosLosContratos();
 
     if (window.lucide) {
         window.lucide.createIcons();
@@ -380,6 +400,36 @@ document.addEventListener("DOMContentLoaded", () => {
 
         } catch (error) {
             alert(`No se pudo consultar el contrato: ${error.message}`);
+        }
+    }
+
+    async function cargarTodosLosContratos() {
+        const tbody = document.getElementById("contratos-table-body");
+        if (!tbody) return;
+
+        try {
+            const contratos = await window.contratosAPI.obtenerTodas();
+
+            if (!tbody.isConnected) return;
+
+            contratos.forEach(contrato => {
+                contratosConsultados.set(Number(contrato.id), contrato);
+            });
+
+            renderizarContratosConsultados();
+
+        } catch (error) {
+            console.error("Error al cargar contratos:", error);
+
+            if (tbody.isConnected) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="8">
+                            No se pudieron cargar los contratos. Verifica la conexión con el servidor.
+                        </td>
+                    </tr>
+                `;
+            }
         }
     }
 
@@ -1004,6 +1054,1752 @@ document.addEventListener("DOMContentLoaded", () => {
                     }
                 }
                         });
+    }
+
+    async function mostrarEmpleados() {
+    contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Gestión de empleados</h1>
+                <p class="page-description">
+                    Administración del personal de operación.
+                </p>
+            </div>
+        </section>
+
+        ${crearIndicadoresModulo([
+            { id: "empleados-total", titulo: "Total de empleados", icono: "users" },
+            { id: "empleados-activos", titulo: "Empleados activos", icono: "user-check" },
+            { id: "empleados-inactivos", titulo: "Inactivos", icono: "user-x" }
+        ])}
+
+        <section class="content-panel branches-panel">
+            <div class="branches-toolbar">
+                <div class="branches-search rentcar-search">
+                    <i data-lucide="search"></i>
+
+                    <input
+                        type="search"
+                        id="buscar-empleado"
+                        placeholder="Buscar por nombre, usuario o rol..."
+                        aria-label="Buscar empleado"
+                        autocomplete="off"
+                    >
+
+                    <button
+                        type="button"
+                        id="btn-buscar-empleado"
+                        class="btn-search"
+                    >
+                        <i data-lucide="search"></i>
+                        Buscar
+                    </button>
+                </div>
+
+                <button
+                    type="button"
+                    id="nuevo-empleado"
+                    class="btn-primary"
+                >
+                    <i data-lucide="user-plus"></i>
+                    Nuevo empleado
+                </button>
+            </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Usuario</th>
+                            <th>Sucursal</th>
+                            <th>Rol</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="empleados-table-body">
+                        <tr>
+                            <td colspan="6">Cargando empleados...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+
+    const cuerpoTabla = document.getElementById("empleados-table-body");
+    const buscador = document.getElementById("buscar-empleado");
+    const botonBuscar = document.getElementById("btn-buscar-empleado");
+
+    document
+        .getElementById("nuevo-empleado")
+        .addEventListener("click", abrirModalEmpleado);
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+
+    try {
+        const [empleados, sucursales] = await Promise.all([
+            window.empleadosAPI.obtenerTodos(),
+            window.sucursalesAPI.obtenerTodas()
+        ]);
+
+        if (!cuerpoTabla.isConnected) return;
+
+        const nombresSucursales = new Map(
+            sucursales.map(sucursal => [sucursal.id, sucursal.nombre])
+        );
+
+        const activos = empleados.filter(empleado => empleado.activo === true).length;
+
+        actualizarIndicadoresModulo({
+            "empleados-total": empleados.length,
+            "empleados-activos": activos,
+            "empleados-inactivos": empleados.length - activos
+        });
+
+        renderizarEmpleados(empleados, cuerpoTabla, nombresSucursales);
+
+        function buscarEmpleados() {
+            const texto = buscador.value.trim().toLowerCase();
+
+            const filtrados = empleados.filter(empleado =>
+                [empleado.nombre, empleado.username, empleado.rol]
+                    .some(valor => String(valor ?? "").toLowerCase().includes(texto))
+            );
+
+            renderizarEmpleados(filtrados, cuerpoTabla, nombresSucursales);
+        }
+
+        botonBuscar.addEventListener("click", buscarEmpleados);
+
+        buscador.addEventListener("keydown", evento => {
+            if (evento.key === "Enter") {
+                buscarEmpleados();
+            }
+        });
+
+        buscador.addEventListener("input", () => {
+            if (buscador.value.trim() === "") {
+                renderizarEmpleados(empleados, cuerpoTabla, nombresSucursales);
+            }
+        });
+
+    } catch (error) {
+        console.error("Error al cargar empleados:", error);
+
+        if (cuerpoTabla.isConnected) {
+            cuerpoTabla.innerHTML = `
+                <tr>
+                    <td colspan="6">
+                        No se pudieron cargar los empleados.
+                        Verifica la conexión con el servidor.
+                    </td>
+                </tr>
+            `;
+        }
+    }
+    }
+
+    function abrirModalEmpleado() {
+        if (document.getElementById("modal-empleado")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-empleado";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true"
+             aria-labelledby="modal-empleado-titulo">
+
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-empleado-titulo">Nuevo empleado</h2>
+                    <p>Registra un nuevo miembro del personal.</p>
+                </div>
+
+                <button type="button"
+                        class="modal-close"
+                        id="cerrar-modal-empleado"
+                        aria-label="Cerrar formulario">
+                    &times;
+                </button>
+            </div>
+
+            <form id="form-nuevo-empleado">
+                <div class="modal-body">
+
+                    <div class="form-group">
+                        <label for="empleado-nombre">Nombre completo *</label>
+                        <input
+                            type="text"
+                            id="empleado-nombre"
+                            name="nombre"
+                            maxlength="100"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleado-username">Usuario *</label>
+                        <input
+                            type="text"
+                            id="empleado-username"
+                            name="username"
+                            maxlength="50"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleado-password">Contraseña *</label>
+                        <input
+                            type="password"
+                            id="empleado-password"
+                            name="password"
+                            maxlength="255"
+                            autocomplete="new-password"
+                            required
+                        >
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleado-sucursal">Sucursal *</label>
+                        <select id="empleado-sucursal" required>
+                            <option value="">Cargando sucursales...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="empleado-rol">Rol *</label>
+                        <select id="empleado-rol" required>
+                            <option value="">Selecciona un rol</option>
+                            <option value="ADMINISTRADOR">Administrador</option>
+                            <option value="AGENTE">Agente</option>
+                            <option value="MECANICO">Mecánico</option>
+                        </select>
+                    </div>
+
+                    <p id="mensaje-empleado"
+                       class="form-message"
+                       role="alert"></p>
+
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button"
+                            class="btn-secondary"
+                            id="cancelar-empleado">
+                        Cancelar
+                    </button>
+
+                    <button type="submit"
+                            class="btn-primary"
+                            id="guardar-empleado">
+                        Guardar empleado
+                    </button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = document.getElementById("form-nuevo-empleado");
+        const botonGuardar = document.getElementById("guardar-empleado");
+        const mensaje = document.getElementById("mensaje-empleado");
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+
+        document.getElementById("cerrar-modal-empleado")
+            .addEventListener("click", cerrar);
+
+        document.getElementById("cancelar-empleado")
+            .addEventListener("click", cerrar);
+
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        (async () => {
+            try {
+                const sucursales = await window.sucursalesAPI.obtenerActivas();
+
+                if (!modal.isConnected) return;
+
+                const selector = document.getElementById("empleado-sucursal");
+
+                selector.innerHTML = '<option value="">Selecciona una sucursal</option>';
+
+                sucursales.forEach(sucursal => {
+                    const opcion = document.createElement("option");
+                    opcion.value = sucursal.id;
+                    opcion.textContent = sucursal.nombre;
+                    selector.appendChild(opcion);
+                });
+
+                if (sucursales.length === 0) {
+                    selector.innerHTML = '<option value="">No hay sucursales activas</option>';
+                    selector.disabled = true;
+                }
+
+            } catch (error) {
+                console.error("Error al cargar sucursales:", error);
+
+                const selector = document.getElementById("empleado-sucursal");
+
+                if (selector) {
+                    selector.innerHTML = '<option value="">Error al cargar sucursales</option>';
+                    selector.disabled = true;
+                }
+            }
+        })();
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const sucursalId = Number(
+                document.getElementById("empleado-sucursal").value
+            );
+            const nombre = document.getElementById("empleado-nombre").value.trim();
+            const username = document.getElementById("empleado-username").value.trim();
+            const password = document.getElementById("empleado-password").value;
+            const rol = document.getElementById("empleado-rol").value;
+
+            if (!sucursalId || !nombre || !username || !password || !rol) {
+                mensaje.textContent = "Completa todos los campos.";
+                return;
+            }
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Guardando...";
+            mensaje.textContent = "";
+
+            try {
+                const empleado = await window.empleadosAPI.registrar({
+                    sucursalId,
+                    nombre,
+                    username,
+                    password,
+                    rol
+                });
+
+                cerrar();
+
+                mostrarModalExito(
+                    "¡Empleado registrado!",
+                    "El empleado se ha registrado correctamente en el sistema.",
+                    formatearCodigo("EMP", empleado.id)
+                );
+
+                if (location.hash === "#empleados") {
+                    await mostrarEmpleados();
+                }
+
+            } catch (error) {
+                console.error("Error al registrar empleado:", error);
+
+                mensaje.textContent =
+                    "No se pudo registrar el empleado. Verifica que el usuario no exista y los datos sean válidos.";
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Guardar empleado";
+                }
+            }
+        });
+
+        document.getElementById("empleado-nombre").focus();
+    }
+
+    function renderizarEmpleados(empleados, cuerpoTabla, nombresSucursales) {
+        cuerpoTabla.replaceChildren();
+
+        if (!Array.isArray(empleados) || empleados.length === 0) {
+            const fila = document.createElement("tr");
+            const celda = document.createElement("td");
+
+            celda.colSpan = 6;
+            celda.textContent = "No se encontraron empleados.";
+
+            fila.appendChild(celda);
+            cuerpoTabla.appendChild(fila);
+            return;
+        }
+
+        empleados.forEach(empleado => {
+            const fila = cuerpoTabla.insertRow();
+
+            const datos = [
+                empleado.id,
+                empleado.nombre,
+                empleado.username,
+                nombresSucursales.get(empleado.sucursalId) ?? `Sucursal #${empleado.sucursalId}`,
+                empleado.rol
+            ];
+
+            datos.forEach(dato => {
+                const celda = fila.insertCell();
+                celda.textContent = dato ?? "—";
+            });
+
+            const celdaEstado = fila.insertCell();
+            const estado = document.createElement("span");
+
+            estado.className = empleado.activo
+                ? "branch-status active"
+                : "branch-status inactive";
+
+            estado.textContent = empleado.activo ? "Activo" : "Inactivo";
+
+            celdaEstado.appendChild(estado);
+        });
+    }
+
+    async function mostrarTiposTarifas() {
+    contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Tipos de vehículo y tarifas</h1>
+                <p class="page-description">
+                    Catálogo de tipos de vehículo y tarifas de alquiler.
+                </p>
+            </div>
+        </section>
+
+        <div class="reservas-section-heading">
+            <h3>Tipos de vehículo</h3>
+            <p>Clasificación de la flota (SUV, sedán, etc.).</p>
+        </div>
+
+        <section class="content-panel branches-panel">
+            <div class="branches-toolbar">
+                <div class="branches-search rentcar-search">
+                    <i data-lucide="search"></i>
+
+                    <input
+                        type="search"
+                        id="buscar-tipo"
+                        placeholder="Buscar tipo de vehículo..."
+                        aria-label="Buscar tipo de vehículo"
+                        autocomplete="off"
+                    >
+
+                    <button type="button" id="btn-buscar-tipo" class="btn-search">
+                        <i data-lucide="search"></i>
+                        Buscar
+                    </button>
+                </div>
+
+                <button type="button" id="nuevo-tipo" class="btn-primary">
+                    <i data-lucide="tag"></i>
+                    Nuevo tipo
+                </button>
+            </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Nombre</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tipos-table-body">
+                        <tr>
+                            <td colspan="3">Cargando tipos...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <div class="reservas-section-heading">
+            <h3>Tarifas</h3>
+            <p>Precio por día vigente para cada tipo de vehículo.</p>
+        </div>
+
+        <section class="content-panel branches-panel">
+            <div class="branches-toolbar">
+                <span class="tarifas-note">
+                    Al registrar una tarifa se desactiva la anterior del mismo tipo.
+                </span>
+
+                <button type="button" id="nueva-tarifa" class="btn-primary">
+                    <i data-lucide="plus"></i>
+                    Nueva tarifa
+                </button>
+            </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipo</th>
+                            <th>Precio por día</th>
+                            <th>Estado</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tarifas-table-body">
+                        <tr>
+                            <td colspan="4">Cargando tarifas...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+
+    const cuerpoTipos = document.getElementById("tipos-table-body");
+    const cuerpoTarifas = document.getElementById("tarifas-table-body");
+    const buscador = document.getElementById("buscar-tipo");
+
+    document.getElementById("nuevo-tipo").addEventListener("click", abrirModalTipo);
+    document.getElementById("nueva-tarifa").addEventListener("click", abrirModalTarifa);
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+
+    try {
+        const [tipos, tarifas] = await Promise.all([
+            window.tiposVehiculoAPI.obtenerTodos(),
+            window.tarifasAPI.obtenerTodas()
+        ]);
+
+        if (!cuerpoTipos.isConnected) return;
+
+        const nombresTipos = new Map(
+            tipos.map(tipo => [tipo.id, tipo.nombre])
+        );
+
+        renderizarTipos(tipos, cuerpoTipos);
+        renderizarTarifas(tarifas, cuerpoTarifas, nombresTipos);
+
+        function buscarTipos() {
+            const texto = buscador.value.trim().toLowerCase();
+
+            const filtrados = tipos.filter(tipo =>
+                String(tipo.nombre ?? "").toLowerCase().includes(texto)
+            );
+
+            renderizarTipos(filtrados, cuerpoTipos);
+        }
+
+        document.getElementById("btn-buscar-tipo")
+            .addEventListener("click", buscarTipos);
+
+        buscador.addEventListener("keydown", evento => {
+            if (evento.key === "Enter") buscarTipos();
+        });
+
+        buscador.addEventListener("input", () => {
+            if (buscador.value.trim() === "") {
+                renderizarTipos(tipos, cuerpoTipos);
+            }
+        });
+
+    } catch (error) {
+        console.error("Error al cargar tipos y tarifas:", error);
+
+        if (cuerpoTipos.isConnected) {
+            cuerpoTipos.innerHTML = '<tr><td colspan="3">No se pudieron cargar los tipos de vehículo.</td></tr>';
+        }
+
+        if (cuerpoTarifas.isConnected) {
+            cuerpoTarifas.innerHTML = '<tr><td colspan="4">No se pudieron cargar las tarifas.</td></tr>';
+        }
+    }
+    }
+
+    function renderizarTipos(tipos, cuerpoTabla) {
+        cuerpoTabla.replaceChildren();
+
+        if (!Array.isArray(tipos) || tipos.length === 0) {
+            const fila = cuerpoTabla.insertRow();
+            const celda = fila.insertCell();
+            celda.colSpan = 3;
+            celda.textContent = "No se encontraron tipos de vehículo.";
+            fila.appendChild(celda);
+            return;
+        }
+
+        tipos.forEach(tipo => {
+            const fila = cuerpoTabla.insertRow();
+
+            const celdaId = fila.insertCell();
+            celdaId.textContent = tipo.id;
+
+            const celdaNombre = fila.insertCell();
+            celdaNombre.textContent = tipo.nombre;
+
+            const celdaEstado = fila.insertCell();
+            const estado = document.createElement("span");
+            estado.className = tipo.activo ? "branch-status active" : "branch-status inactive";
+            estado.textContent = tipo.activo ? "Activo" : "Inactivo";
+            celdaEstado.appendChild(estado);
+        });
+    }
+
+    function renderizarTarifas(tarifas, cuerpoTabla, nombresTipos) {
+        cuerpoTabla.replaceChildren();
+
+        const formatoMoneda = new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP"
+        });
+
+        if (!Array.isArray(tarifas) || tarifas.length === 0) {
+            const fila = cuerpoTabla.insertRow();
+            const celda = fila.insertCell();
+            celda.colSpan = 4;
+            celda.textContent = "No se encontraron tarifas.";
+            fila.appendChild(celda);
+            return;
+        }
+
+        tarifas.forEach(tarifa => {
+            const fila = cuerpoTabla.insertRow();
+
+            const celdaId = fila.insertCell();
+            celdaId.textContent = tarifa.id;
+
+            const celdaTipo = fila.insertCell();
+            celdaTipo.textContent = nombresTipos.get(tarifa.tipoVehiculoId)
+                ?? `Tipo #${tarifa.tipoVehiculoId}`;
+
+            const celdaPrecio = fila.insertCell();
+            celdaPrecio.textContent = formatoMoneda.format(tarifa.precioPorDia ?? 0);
+
+            const celdaEstado = fila.insertCell();
+            const estado = document.createElement("span");
+            estado.className = tarifa.activo ? "branch-status active" : "branch-status inactive";
+            estado.textContent = tarifa.activo ? "Activa" : "Inactiva";
+            celdaEstado.appendChild(estado);
+        });
+    }
+
+    function abrirModalTipo() {
+        if (document.getElementById("modal-tipo")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-tipo";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true" aria-labelledby="modal-tipo-titulo">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-tipo-titulo">Nuevo tipo de vehículo</h2>
+                    <p>Registra una nueva clasificación para la flota.</p>
+                </div>
+                <button type="button" class="modal-close"
+                        id="cerrar-modal-tipo" aria-label="Cerrar formulario">&times;</button>
+            </div>
+
+            <form id="form-nuevo-tipo">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="tipo-nombre">Nombre *</label>
+                        <input type="text" id="tipo-nombre" name="nombre"
+                               maxlength="80" required>
+                    </div>
+                    <p id="mensaje-tipo" class="form-message" role="alert"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelar-tipo">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="guardar-tipo">Guardar tipo</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = document.getElementById("form-nuevo-tipo");
+        const botonGuardar = document.getElementById("guardar-tipo");
+        const mensaje = document.getElementById("mensaje-tipo");
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+        document.getElementById("cerrar-modal-tipo").addEventListener("click", cerrar);
+        document.getElementById("cancelar-tipo").addEventListener("click", cerrar);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const nombre = document.getElementById("tipo-nombre").value.trim();
+
+            if (!nombre) {
+                mensaje.textContent = "Completa el nombre del tipo.";
+                return;
+            }
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Guardando...";
+            mensaje.textContent = "";
+
+            try {
+                const tipo = await window.tiposVehiculoAPI.crear({ nombre });
+
+                cerrar();
+
+                mostrarModalExito(
+                    "¡Tipo registrado!",
+                    "El tipo de vehículo se ha registrado correctamente.",
+                    formatearCodigo("TIP", tipo.id)
+                );
+
+                if (location.hash === "#tipos-tarifas") {
+                    await mostrarTiposTarifas();
+                }
+
+            } catch (error) {
+                console.error("Error al registrar tipo:", error);
+                mensaje.textContent =
+                    "No se pudo registrar el tipo. Verifica que el nombre no exista.";
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Guardar tipo";
+                }
+            }
+        });
+
+        document.getElementById("tipo-nombre").focus();
+    }
+
+    function abrirModalTarifa() {
+        if (document.getElementById("modal-tarifa")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-tarifa";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true" aria-labelledby="modal-tarifa-titulo">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-tarifa-titulo">Nueva tarifa</h2>
+                    <p>Define el precio por día para un tipo de vehículo.</p>
+                </div>
+                <button type="button" class="modal-close"
+                        id="cerrar-modal-tarifa" aria-label="Cerrar formulario">&times;</button>
+            </div>
+
+            <form id="form-nueva-tarifa">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="tarifa-tipo">Tipo de vehículo *</label>
+                        <select id="tarifa-tipo" required>
+                            <option value="">Cargando tipos...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="tarifa-precio">Precio por día (RD$) *</label>
+                        <input type="number" id="tarifa-precio" name="precioPorDia"
+                               min="0.01" step="0.01" required>
+                    </div>
+
+                    <p id="mensaje-tarifa" class="form-message" role="alert"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelar-tarifa">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="guardar-tarifa">Guardar tarifa</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = document.getElementById("form-nueva-tarifa");
+        const botonGuardar = document.getElementById("guardar-tarifa");
+        const mensaje = document.getElementById("mensaje-tarifa");
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+        document.getElementById("cerrar-modal-tarifa").addEventListener("click", cerrar);
+        document.getElementById("cancelar-tarifa").addEventListener("click", cerrar);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        (async () => {
+            try {
+                const tipos = await window.tiposVehiculoAPI.obtenerTodos();
+
+                if (!modal.isConnected) return;
+
+                const selector = document.getElementById("tarifa-tipo");
+
+                selector.innerHTML = '<option value="">Selecciona un tipo</option>';
+
+                const activos = tipos.filter(tipo => tipo.activo === true);
+
+                activos.forEach(tipo => {
+                    const opcion = document.createElement("option");
+                    opcion.value = tipo.id;
+                    opcion.textContent = tipo.nombre;
+                    selector.appendChild(opcion);
+                });
+
+                if (activos.length === 0) {
+                    selector.innerHTML = '<option value="">No hay tipos activos</option>';
+                    selector.disabled = true;
+                }
+
+            } catch (error) {
+                console.error("Error al cargar tipos:", error);
+
+                const selector = document.getElementById("tarifa-tipo");
+
+                if (selector) {
+                    selector.innerHTML = '<option value="">Error al cargar tipos</option>';
+                    selector.disabled = true;
+                }
+            }
+        })();
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const tipoVehiculoId = Number(
+                document.getElementById("tarifa-tipo").value
+            );
+            const precioPorDia = Number(
+                document.getElementById("tarifa-precio").value
+            );
+
+            if (!tipoVehiculoId || !Number.isFinite(precioPorDia) || precioPorDia <= 0) {
+                mensaje.textContent = "Selecciona un tipo y un precio válido.";
+                return;
+            }
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Guardando...";
+            mensaje.textContent = "";
+
+            try {
+                const tarifa = await window.tarifasAPI.crear({
+                    tipoVehiculoId,
+                    precioPorDia
+                });
+
+                cerrar();
+
+                mostrarModalExito(
+                    "¡Tarifa registrada!",
+                    "La tarifa se ha registrado y quedó como vigente.",
+                    formatearCodigo("TAR", tarifa.id)
+                );
+
+                if (location.hash === "#tipos-tarifas") {
+                    await mostrarTiposTarifas();
+                }
+
+            } catch (error) {
+                console.error("Error al registrar tarifa:", error);
+                mensaje.textContent = "No se pudo registrar la tarifa. Verifica los datos.";
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Guardar tarifa";
+                }
+            }
+        });
+    }
+
+    async function mostrarInspecciones() {
+    contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Gestión de inspecciones</h1>
+                <p class="page-description">
+                    Registro del estado de los vehículos al salir y al entrar.
+                </p>
+            </div>
+        </section>
+
+        <div class="reservas-section-heading">
+            <h3>Registrar inspección</h3>
+            <p>Registra una inspección de salida o de entrada para un contrato.</p>
+        </div>
+
+        <section class="content-panel branches-panel">
+            <div class="branches-toolbar">
+                <span class="tarifas-note">
+                    Máximo una inspección de salida y una de entrada por contrato.
+                </span>
+
+                <button type="button" id="nueva-inspeccion" class="btn-primary">
+                    <i data-lucide="clipboard-check"></i>
+                    Nueva inspección
+                </button>
+            </div>
+        </section>
+
+        <div class="reservas-section-heading">
+            <h3>Inspecciones por contrato</h3>
+            <p>Consulta las inspecciones de un contrato por su número.</p>
+        </div>
+
+        <section class="content-panel branches-panel reservas-list-panel">
+            <div class="branches-toolbar reservas-list-toolbar">
+                <div class="reservas-search-input">
+                    <i data-lucide="search"></i>
+                    <input
+                        type="number"
+                        id="buscar-contrato-inspecciones"
+                        min="1"
+                        step="1"
+                        placeholder="Número de contrato..."
+                        aria-label="Buscar inspecciones por contrato"
+                    >
+                    <button type="button" id="btn-buscar-inspecciones" class="btn-search">
+                        <i data-lucide="search"></i>
+                        Buscar
+                    </button>
+                </div>
+            </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tipo</th>
+                            <th>Empleado</th>
+                            <th>Kilometraje</th>
+                            <th>Combustible</th>
+                            <th>Fecha</th>
+                            <th>Observaciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="inspecciones-table-body">
+                        <tr>
+                            <td colspan="7">
+                                <div class="reservas-empty">
+                                    <i data-lucide="clipboard-search"></i>
+                                    <h3>Consulta las inspecciones</h3>
+                                    <p>Introduce el número de un contrato para ver sus inspecciones.</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+
+    document.getElementById("nueva-inspeccion")
+        .addEventListener("click", abrirModalInspeccion);
+
+    const buscador = document.getElementById("buscar-contrato-inspecciones");
+
+    const buscar = () => {
+        const id = buscador.value.trim();
+        if (id) cargarInspeccionesContrato(id);
+    };
+
+    document.getElementById("btn-buscar-inspecciones")
+        .addEventListener("click", buscar);
+
+    buscador.addEventListener("change", buscar);
+
+    buscador.addEventListener("keydown", evento => {
+        if (evento.key === "Enter") buscar();
+    });
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+    }
+
+    async function cargarInspeccionesContrato(contratoId) {
+        const tbody = document.getElementById("inspecciones-table-body");
+        if (!tbody) return;
+
+        const id = Number(contratoId);
+
+        if (!Number.isSafeInteger(id) || id < 1) {
+            alert("Introduce un número de contrato válido.");
+            return;
+        }
+
+        tbody.innerHTML = '<tr><td colspan="7">Cargando inspecciones...</td></tr>';
+
+        try {
+            const [inspecciones, empleados] = await Promise.all([
+                window.inspeccionesAPI.obtenerPorContrato(id),
+                window.empleadosAPI.obtenerTodos()
+            ]);
+
+            if (!tbody.isConnected) return;
+
+            const nombresEmpleados = new Map(
+                empleados.map(empleado => [empleado.id, empleado.nombre])
+            );
+
+            renderizarInspecciones(inspecciones, tbody, nombresEmpleados);
+
+        } catch (error) {
+            console.error("Error al consultar inspecciones:", error);
+
+            if (tbody.isConnected) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7">
+                            No se pudieron consultar las inspecciones: ${error.message}
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    function renderizarInspecciones(inspecciones, cuerpoTabla, nombresEmpleados) {
+        cuerpoTabla.replaceChildren();
+
+        if (!Array.isArray(inspecciones) || inspecciones.length === 0) {
+            const fila = cuerpoTabla.insertRow();
+            const celda = fila.insertCell();
+            celda.colSpan = 7;
+            celda.textContent = "Este contrato no tiene inspecciones registradas.";
+            fila.appendChild(celda);
+            return;
+        }
+
+        const etiquetaCombustible = combustible => ({
+            "LLENO": "Lleno",
+            "TRES_CUARTOS": "3/4",
+            "MEDIO": "1/2",
+            "CUARTO": "1/4",
+            "RESERVA": "Reserva"
+        }[combustible] ?? combustible);
+
+        inspecciones.forEach(inspeccion => {
+            const fila = cuerpoTabla.insertRow();
+
+            const datos = [
+                inspeccion.id,
+                inspeccion.tipo,
+                nombresEmpleados.get(inspeccion.empleadoId) ?? `Empleado #${inspeccion.empleadoId}`,
+                inspeccion.kilometraje,
+                etiquetaCombustible(inspeccion.combustible),
+                inspeccion.fecha
+                    ? new Date(inspeccion.fecha).toLocaleDateString("es-DO")
+                    : "—",
+                inspeccion.observaciones || "—"
+            ];
+
+            datos.forEach(dato => {
+                const celda = fila.insertCell();
+                celda.textContent = dato ?? "—";
+            });
+        });
+    }
+
+    function abrirModalInspeccion() {
+        if (document.getElementById("modal-inspeccion")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-inspeccion";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true" aria-labelledby="modal-inspeccion-titulo">
+            <div class="modal-header">
+                <div>
+                    <h2 id="modal-inspeccion-titulo">Nueva inspección</h2>
+                    <p>Registra el estado del vehículo al salir o al entrar.</p>
+                </div>
+                <button type="button" class="modal-close"
+                        id="cerrar-modal-inspeccion" aria-label="Cerrar formulario">&times;</button>
+            </div>
+
+            <form id="form-nueva-inspeccion">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="inspeccion-contrato">Número de contrato *</label>
+                        <input type="number" id="inspeccion-contrato"
+                               min="1" step="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-empleado">Empleado inspector *</label>
+                        <select id="inspeccion-empleado" required>
+                            <option value="">Cargando empleados...</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-tipo">Tipo *</label>
+                        <select id="inspeccion-tipo" required>
+                            <option value="">Selecciona el tipo</option>
+                            <option value="SALIDA">Salida</option>
+                            <option value="ENTRADA">Entrada</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-kilometraje">Kilometraje *</label>
+                        <input type="number" id="inspeccion-kilometraje"
+                               min="0" step="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-combustible">Nivel de combustible *</label>
+                        <select id="inspeccion-combustible" required>
+                            <option value="">Selecciona el nivel</option>
+                            <option value="LLENO">Lleno</option>
+                            <option value="3/4">3/4</option>
+                            <option value="1/2">1/2</option>
+                            <option value="1/4">1/4</option>
+                            <option value="RESERVA">Reserva</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="inspeccion-observaciones">Observaciones</label>
+                        <input type="text" id="inspeccion-observaciones"
+                               maxlength="250" placeholder="Sin detalles">
+                    </div>
+
+                    <p id="mensaje-inspeccion" class="form-message" role="alert"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelar-inspeccion">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="guardar-inspeccion">Registrar inspección</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = document.getElementById("form-nueva-inspeccion");
+        const botonGuardar = document.getElementById("guardar-inspeccion");
+        const mensaje = document.getElementById("mensaje-inspeccion");
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+        document.getElementById("cerrar-modal-inspeccion").addEventListener("click", cerrar);
+        document.getElementById("cancelar-inspeccion").addEventListener("click", cerrar);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        (async () => {
+            try {
+                const empleados = await window.empleadosAPI.obtenerTodos();
+
+                if (!modal.isConnected) return;
+
+                const selector = document.getElementById("inspeccion-empleado");
+
+                selector.innerHTML = '<option value="">Selecciona un empleado</option>';
+
+                empleados
+                    .filter(empleado => empleado.activo === true)
+                    .forEach(empleado => {
+                        const opcion = document.createElement("option");
+                        opcion.value = empleado.id;
+                        opcion.textContent = empleado.nombre;
+                        selector.appendChild(opcion);
+                    });
+
+                if (empleados.filter(empleado => empleado.activo === true).length === 0) {
+                    selector.innerHTML = '<option value="">No hay empleados activos</option>';
+                    selector.disabled = true;
+                }
+
+            } catch (error) {
+                console.error("Error al cargar empleados:", error);
+
+                const selector = document.getElementById("inspeccion-empleado");
+
+                if (selector) {
+                    selector.innerHTML = '<option value="">Error al cargar empleados</option>';
+                    selector.disabled = true;
+                }
+            }
+        })();
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const contratoId = Number(
+                document.getElementById("inspeccion-contrato").value
+            );
+            const empleadoId = Number(
+                document.getElementById("inspeccion-empleado").value
+            );
+            const tipo = document.getElementById("inspeccion-tipo").value;
+            const kilometraje = Number(
+                document.getElementById("inspeccion-kilometraje").value
+            );
+            const nivelCombustible = document.getElementById("inspeccion-combustible").value;
+            const observaciones = document.getElementById("inspeccion-observaciones").value.trim();
+
+            if (!Number.isSafeInteger(contratoId) || contratoId < 1 ||
+                !Number.isSafeInteger(empleadoId) || empleadoId < 1 ||
+                !tipo || !Number.isFinite(kilometraje) || kilometraje < 0 ||
+                !nivelCombustible) {
+                mensaje.textContent = "Completa todos los campos obligatorios.";
+                return;
+            }
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Registrando...";
+            mensaje.textContent = "";
+
+            try {
+                const inspeccion = await window.inspeccionesAPI.crear({
+                    contratoId,
+                    empleadoId,
+                    tipo,
+                    kilometraje,
+                    nivelCombustible,
+                    observaciones
+                });
+
+                cerrar();
+
+                mostrarModalExito(
+                    "¡Inspección registrada!",
+                    "La inspección se ha registrado correctamente.",
+                    formatearCodigo("INS", inspeccion.id)
+                );
+
+                if (location.hash === "#inspecciones") {
+                    await mostrarInspecciones();
+
+                    const buscador = document.getElementById("buscar-contrato-inspecciones");
+
+                    if (buscador) {
+                        buscador.value = String(contratoId);
+                        await cargarInspeccionesContrato(contratoId);
+                    }
+                }
+
+            } catch (error) {
+                console.error("Error al registrar inspección:", error);
+                mensaje.textContent = `No se pudo registrar la inspección: ${error.message}`;
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Registrar inspección";
+                }
+            }
+        });
+
+        document.getElementById("inspeccion-contrato").focus();
+    }
+
+    async function mostrarFacturacion() {
+    contenido.innerHTML = `
+        <section class="page-header">
+            <div>
+                <h1>Gestión de facturación</h1>
+                <p class="page-description">
+                    Consulta y administración de las facturas de alquiler.
+                </p>
+            </div>
+        </section>
+
+        <div class="reservas-section-heading">
+            <h3>Facturas emitidas</h3>
+            <p>Facturas iniciales y complementarias con su detalle.</p>
+        </div>
+
+        <section class="content-panel branches-panel reservas-list-panel">
+            <div class="branches-toolbar reservas-list-toolbar">
+                <span class="tarifas-note">
+                    La factura inicial se emite tras la salida; la complementaria tras la entrada.
+                </span>
+
+                <button type="button" id="nueva-factura" class="btn-primary">
+                    <i data-lucide="receipt"></i>
+                    Nueva factura inicial
+                </button>
+            </div>
+
+            <div class="branches-table-container">
+                <table class="branches-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Contrato</th>
+                            <th>Tipo</th>
+                            <th>Total</th>
+                            <th>Fecha</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="facturas-table-body">
+                        <tr>
+                            <td colspan="6">Cargando facturas...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    `;
+
+    document.getElementById("nueva-factura")
+        .addEventListener("click", abrirModalFacturaInicial);
+
+    if (window.lucide) {
+        window.lucide.createIcons();
+    }
+
+    cargarFacturas();
+    }
+
+    async function cargarFacturas() {
+        const tbody = document.getElementById("facturas-table-body");
+        if (!tbody) return;
+
+        try {
+            const facturas = await window.facturasAPI.obtenerTodas();
+
+            if (!tbody.isConnected) return;
+
+            renderizarFacturas(facturas, tbody);
+
+        } catch (error) {
+            console.error("Error al cargar facturas:", error);
+
+            if (tbody.isConnected) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6">
+                            No se pudieron cargar las facturas. Verifica la conexión con el servidor.
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+    }
+
+    function renderizarFacturas(facturas, cuerpoTabla) {
+        cuerpoTabla.replaceChildren();
+
+        const formatoMoneda = new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP"
+        });
+
+        if (!Array.isArray(facturas) || facturas.length === 0) {
+            const fila = cuerpoTabla.insertRow();
+            const celda = fila.insertCell();
+            celda.colSpan = 6;
+            celda.textContent = "No hay facturas registradas.";
+            fila.appendChild(celda);
+            return;
+        }
+
+        facturas.forEach(factura => {
+            const fila = cuerpoTabla.insertRow();
+
+            const datos = [
+                formatearCodigo("FAC", factura.id),
+                formatearCodigo("CON", factura.contratoId),
+                factura.tipo,
+                formatoMoneda.format(factura.total ?? 0),
+                factura.fecha
+                    ? new Date(factura.fecha).toLocaleDateString("es-DO")
+                    : "—"
+            ];
+
+            datos.forEach(dato => {
+                const celda = fila.insertCell();
+                celda.textContent = dato ?? "—";
+            });
+
+            const celdaAcciones = fila.insertCell();
+
+            const botonVer = document.createElement("button");
+            botonVer.type = "button";
+            botonVer.className = "btn-search";
+            botonVer.textContent = "Ver";
+            botonVer.addEventListener("click", () => verDetalleFactura(factura));
+            celdaAcciones.appendChild(botonVer);
+
+            const botonPdf = document.createElement("button");
+            botonPdf.type = "button";
+            botonPdf.className = "btn-search";
+            botonPdf.textContent = "PDF";
+            botonPdf.addEventListener("click", () => descargarFacturaPdf(factura.id));
+            celdaAcciones.appendChild(botonPdf);
+
+            if (factura.tipo === "INICIAL") {
+                const botonComplementaria = document.createElement("button");
+                botonComplementaria.type = "button";
+                botonComplementaria.className = "btn-search";
+                botonComplementaria.textContent = "Complementaria";
+                botonComplementaria.addEventListener(
+                    "click",
+                    () => abrirModalComplementaria(factura)
+                );
+                celdaAcciones.appendChild(botonComplementaria);
+            }
+        });
+    }
+
+    function descargarFacturaPdf(id) {
+        window.open(`/api/v1/facturas/${encodeURIComponent(id)}/pdf`, "_blank");
+    }
+
+    function verDetalleFactura(factura) {
+        if (document.getElementById("modal-detalle-factura")) return;
+
+        const formatoMoneda = new Intl.NumberFormat("es-DO", {
+            style: "currency",
+            currency: "DOP"
+        });
+
+        const modal = document.createElement("div");
+        modal.id = "modal-detalle-factura";
+        modal.className = "modal-overlay";
+
+        const filasDetalle = (factura.detalles ?? []).map(detalle => `
+            <tr>
+                <td>${detalle.concepto ?? "—"}</td>
+                <td>${detalle.cantidad ?? 0}</td>
+                <td>${formatoMoneda.format(detalle.precioUnitario ?? 0)}</td>
+                <td>${formatoMoneda.format(detalle.subtotal ?? 0)}</td>
+            </tr>
+        `).join("");
+
+        modal.innerHTML = `
+        <div class="modal-container factura-detalle-modal" role="dialog"
+             aria-modal="true" aria-labelledby="titulo-detalle-factura">
+            <div class="modal-header">
+                <div>
+                    <h2 id="titulo-detalle-factura">Detalle de factura</h2>
+                    <p>${formatearCodigo("FAC", factura.id)}</p>
+                </div>
+                <button type="button" class="modal-close"
+                        id="cerrar-detalle-factura" aria-label="Cerrar">&times;</button>
+            </div>
+
+            <div class="modal-body">
+                <div class="factura-resumen">
+                    <div><span>Contrato</span><strong>${formatearCodigo("CON", factura.contratoId)}</strong></div>
+                    <div><span>Tipo</span><strong>${factura.tipo}</strong></div>
+                    <div><span>Subtotal</span><strong>${formatoMoneda.format(factura.subtotal ?? 0)}</strong></div>
+                    <div><span>Cargos</span><strong>${formatoMoneda.format(factura.cargos ?? 0)}</strong></div>
+                    <div><span>Impuestos</span><strong>${formatoMoneda.format(factura.impuestos ?? 0)}</strong></div>
+                    <div><span>Total</span><strong>${formatoMoneda.format(factura.total ?? 0)}</strong></div>
+                </div>
+
+                <div class="branches-table-container">
+                    <table class="branches-table">
+                        <thead>
+                            <tr>
+                                <th>Concepto</th>
+                                <th>Cantidad</th>
+                                <th>Precio unitario</th>
+                                <th>Subtotal</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${filasDetalle || '<tr><td colspan="4">Sin detalles.</td></tr>'}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-secondary" id="cerrar-detalle-factura-btn">Cerrar</button>
+            </div>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+        document.getElementById("cerrar-detalle-factura").addEventListener("click", cerrar);
+        document.getElementById("cerrar-detalle-factura-btn").addEventListener("click", cerrar);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+    }
+
+    function abrirModalFacturaInicial() {
+        if (document.getElementById("modal-factura-inicial")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-factura-inicial";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true" aria-labelledby="titulo-factura-inicial">
+            <div class="modal-header">
+                <div>
+                    <h2 id="titulo-factura-inicial">Nueva factura inicial</h2>
+                    <p>Emite la factura inicial de un contrato con inspección de salida.</p>
+                </div>
+                <button type="button" class="modal-close"
+                        id="cerrar-factura-inicial" aria-label="Cerrar formulario">&times;</button>
+            </div>
+
+            <form id="form-factura-inicial">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="factura-contrato">Número de contrato *</label>
+                        <input type="number" id="factura-contrato" min="1" step="1" required>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="factura-devolucion">Fecha de devolución (opcional)</label>
+                        <input type="date" id="factura-devolucion">
+                    </div>
+
+                    <p id="mensaje-factura-inicial" class="form-message" role="alert"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelar-factura-inicial">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="guardar-factura-inicial">Emitir factura</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = document.getElementById("form-factura-inicial");
+        const botonGuardar = document.getElementById("guardar-factura-inicial");
+        const mensaje = document.getElementById("mensaje-factura-inicial");
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+        document.getElementById("cerrar-factura-inicial").addEventListener("click", cerrar);
+        document.getElementById("cancelar-factura-inicial").addEventListener("click", cerrar);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const contratoId = Number(
+                document.getElementById("factura-contrato").value
+            );
+            const fechaDevolucion = document.getElementById("factura-devolucion").value || null;
+
+            if (!Number.isSafeInteger(contratoId) || contratoId < 1) {
+                mensaje.textContent = "Introduce un número de contrato válido.";
+                return;
+            }
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Emitiendo...";
+            mensaje.textContent = "";
+
+            try {
+                const factura = await window.facturasAPI.crear({
+                    contratoId,
+                    fechaDevolucion
+                });
+
+                cerrar();
+
+                mostrarModalExito(
+                    "¡Factura emitida!",
+                    "La factura inicial se ha emitido correctamente.",
+                    formatearCodigo("FAC", factura.id)
+                );
+
+                if (location.hash === "#facturacion") {
+                    await cargarFacturas();
+                }
+
+            } catch (error) {
+                console.error("Error al emitir factura:", error);
+                mensaje.textContent = `No se pudo emitir la factura: ${error.message}`;
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Emitir factura";
+                }
+            }
+        });
+
+        document.getElementById("factura-contrato").focus();
+    }
+
+    function abrirModalComplementaria(facturaInicial) {
+        if (document.getElementById("modal-factura-complementaria")) return;
+
+        const modal = document.createElement("div");
+        modal.id = "modal-factura-complementaria";
+        modal.className = "modal-overlay";
+
+        modal.innerHTML = `
+        <div class="modal-container" role="dialog"
+             aria-modal="true" aria-labelledby="titulo-factura-complementaria">
+            <div class="modal-header">
+                <div>
+                    <h2 id="titulo-factura-complementaria">Factura complementaria</h2>
+                    <p>De ${formatearCodigo("FAC", facturaInicial.id)} · contrato ${formatearCodigo("CON", facturaInicial.contratoId)}</p>
+                </div>
+                <button type="button" class="modal-close"
+                        id="cerrar-factura-complementaria" aria-label="Cerrar">&times;</button>
+            </div>
+
+            <form id="form-factura-complementaria">
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label for="complementaria-devolucion">Fecha de devolución (opcional)</label>
+                        <input type="date" id="complementaria-devolucion">
+                    </div>
+
+                    <p id="mensaje-factura-complementaria" class="form-message" role="alert"></p>
+                </div>
+
+                <div class="modal-footer">
+                    <button type="button" class="btn-secondary" id="cancelar-factura-complementaria">Cancelar</button>
+                    <button type="submit" class="btn-primary" id="guardar-factura-complementaria">Emitir complementaria</button>
+                </div>
+            </form>
+        </div>
+    `;
+
+        document.body.appendChild(modal);
+
+        const formulario = document.getElementById("form-factura-complementaria");
+        const botonGuardar = document.getElementById("guardar-factura-complementaria");
+        const mensaje = document.getElementById("mensaje-factura-complementaria");
+
+        const cerrar = () => {
+            document.removeEventListener("keydown", cerrarConEscape);
+            modal.remove();
+        };
+
+        const cerrarConEscape = evento => {
+            if (evento.key === "Escape") cerrar();
+        };
+
+        document.addEventListener("keydown", cerrarConEscape);
+        document.getElementById("cerrar-factura-complementaria").addEventListener("click", cerrar);
+        document.getElementById("cancelar-factura-complementaria").addEventListener("click", cerrar);
+        modal.addEventListener("click", evento => {
+            if (evento.target === modal) cerrar();
+        });
+
+        formulario.addEventListener("submit", async evento => {
+            evento.preventDefault();
+
+            const fechaDevolucion = document.getElementById("complementaria-devolucion").value || null;
+
+            botonGuardar.disabled = true;
+            botonGuardar.textContent = "Emitiendo...";
+            mensaje.textContent = "";
+
+            try {
+                const factura = await window.facturasAPI.crearComplementaria(
+                    facturaInicial.id,
+                    { fechaDevolucion }
+                );
+
+                cerrar();
+
+                mostrarModalExito(
+                    "¡Complementaria emitida!",
+                    "La factura complementaria se ha emitido correctamente.",
+                    formatearCodigo("FAC", factura.id)
+                );
+
+                if (location.hash === "#facturacion") {
+                    await cargarFacturas();
+                }
+
+            } catch (error) {
+                console.error("Error al emitir complementaria:", error);
+                mensaje.textContent = `No se pudo emitir la complementaria: ${error.message}`;
+
+            } finally {
+                if (botonGuardar.isConnected) {
+                    botonGuardar.disabled = false;
+                    botonGuardar.textContent = "Emitir complementaria";
+                }
+            }
+        });
     }
 
     async function cargarDashboard() {

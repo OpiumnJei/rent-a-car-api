@@ -1096,6 +1096,44 @@ button, a {
     border-color: #BFE3CF;
 }
 
+.tarifas-note {
+    font-size: 12px;
+    color: #69717D;
+}
+
+.factura-resumen {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 10px 16px;
+    margin-bottom: 16px;
+}
+
+.factura-resumen div {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+
+.factura-resumen span {
+    font-size: 11px;
+    color: #69717D;
+}
+
+.factura-resumen strong {
+    font-size: 14px;
+    color: #20252D;
+}
+
+.factura-detalle-modal {
+    max-width: 720px;
+}
+
+@media (max-width: 700px) {
+    .factura-resumen {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
 .branches-message {
     text-align: center;
     color: #69717D !important;

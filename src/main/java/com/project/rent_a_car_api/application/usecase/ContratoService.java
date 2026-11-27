@@ -14,6 +14,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.List;
 
 /**
  * Caso de uso de contratos (RF-04).
@@ -76,5 +77,11 @@ public class ContratoService implements ContratoUseCase {
             return Result.fail(DomainError.notFound("Contrato no encontrado: " + id));
         }
         return Result.ok(c.get());
+    }
+
+    @Override
+    @Transactional(readOnly = true)
+    public Result<List<Contrato>> listarTodas() {
+        return Result.ok(contratos.listarTodos());
     }
 }

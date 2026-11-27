@@ -190,6 +190,10 @@ const contratosAPI = {
         });
     },
 
+    obtenerTodas: async () => {
+        return apiRequest("/contratos");
+    },
+
     obtenerPorId: async (id) => {
         return apiRequest(`/contratos/${encodeURIComponent(id)}`);
     }
@@ -221,6 +225,42 @@ const empleadosAPI = {
 window.empleadosAPI = empleadosAPI;
 
 
+const tarifasAPI = {
+
+    obtenerTodas: async () => {
+        return apiRequest("/tarifas");
+    },
+
+    crear: async (tarifa) => {
+        return apiRequest("/tarifas", {
+            method: "POST",
+            body: JSON.stringify(tarifa)
+        });
+    }
+
+};
+
+window.tarifasAPI = tarifasAPI;
+
+const inspeccionesAPI = {
+
+    crear: async (inspeccion) => {
+        return apiRequest("/inspecciones", {
+            method: "POST",
+            body: JSON.stringify(inspeccion)
+        });
+    },
+
+    obtenerPorContrato: async (contratoId) => {
+        return apiRequest(
+            `/contratos/${encodeURIComponent(contratoId)}/inspecciones`
+        );
+    }
+
+};
+
+window.inspeccionesAPI = inspeccionesAPI;
+
 const facturasAPI = {
 
     obtenerTodas: async () => {
@@ -229,6 +269,23 @@ const facturasAPI = {
 
     obtenerPorId: async (id) => {
         return apiRequest(`/facturas/${encodeURIComponent(id)}`);
+    },
+
+    crear: async (factura) => {
+        return apiRequest("/facturas", {
+            method: "POST",
+            body: JSON.stringify(factura)
+        });
+    },
+
+    crearComplementaria: async (id, body) => {
+        return apiRequest(
+            `/facturas/${encodeURIComponent(id)}/complementaria`,
+            {
+                method: "POST",
+                body: JSON.stringify(body)
+            }
+        );
     }
 
 };

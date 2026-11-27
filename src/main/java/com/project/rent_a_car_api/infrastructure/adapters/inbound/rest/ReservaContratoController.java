@@ -73,6 +73,19 @@ public class ReservaContratoController {
         return Responses.ContratoResponse.desde(r.getValue());
     }
 
+    @Operation(summary = "Listar contratos", description = "Obtiene todos los contratos registrados")
+    @GetMapping("/contratos")
+    public List<Responses.ContratoResponse> listarContratos() {
+        var r = contratos.listarTodas();
+        if (r.isFailure()) {
+            throw new DomainException(r.getError());
+        }
+        return r.getValue()
+                .stream()
+                .map(Responses.ContratoResponse::desde)
+                .toList();
+    }
+
     @Operation(
     summary = "Listar reservas",
     description = "Obtiene todas las reservas registradas"
